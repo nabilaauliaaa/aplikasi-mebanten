@@ -1,6 +1,6 @@
 # apk_mebanten
 
-A new Flutter project.
+Mebanten is a mobile application designed to help users search, learn, and understand various types of banten in Balinese Hindu tradition. Built with Flutter and integrated with Firebase, the app serves as a digital encyclopedia, providing detailed information about the name of the banten, description, history, and references of each banten. Mebanten aims to preserve cultural heritage, simplify information access, and strengthen spiritual values within daily life. It serves as both an educational tool and a digital archive for Balinese Hindu rituals. 🌺✨
 
 ## Getting Started
 
