@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import './auth/login_screen.dart';
+import 'package:apk_mebanten/screens/splash_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -8,15 +8,16 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
+  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Mebanten',
+      title: 'Flutter Demo',
       theme: ThemeData(
-        primarySwatch: Colors.green,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const LoginScreen(),
       debugShowCheckedModeBanner: false,
+      home: const SplashScreen(),
     );
   }
 }
