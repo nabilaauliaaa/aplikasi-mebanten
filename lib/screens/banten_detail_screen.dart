@@ -1,6 +1,7 @@
 // lib/screens/banten_detail_screen.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // Tambahkan import ini
 import '../services/banten_service.dart';
 import '../models/banten_model.dart';
 import '../services/auth_service.dart';
@@ -18,7 +19,7 @@ class BantenDetailScreen extends StatefulWidget {
 class _BantenDetailScreenState extends State<BantenDetailScreen> {
   final BantenService _bantenService = BantenService();
   final AuthService _authService = AuthService();
-  late Future<BantenModel> _bantenFuture;
+  late Future<BantenModel?> _bantenFuture;
   bool _isLoading = false;
   
   @override
@@ -28,7 +29,25 @@ class _BantenDetailScreenState extends State<BantenDetailScreen> {
   }
   
   void _loadBanten() {
-    _bantenFuture = _bantenService.getBantenById(widget.bantenId);
+    // Ubah ini untuk mengonversi DocumentSnapshot ke BantenModel dengan benar
+    _bantenFuture = _fetchBantenModel();
+  }
+  
+  // Tambahkan metode baru untuk mengambil dan mengonversi data
+  Future<BantenModel?> _fetchBantenModel() async {
+    try {
+      final doc = await _bantenService.getBantenById(widget.bantenId);
+      if (!doc.exists) {
+        return null;
+      }
+      
+      // Konversi DocumentSnapshot ke BantenModel
+      final data = doc.data() as Map<String, dynamic>;
+      return BantenModel.fromJson(doc.id, data);
+    } catch (e) {
+      print('Error fetching banten: $e');
+      rethrow;
+    }
   }
   
   Future<void> _deleteBanten() async {
@@ -99,7 +118,7 @@ class _BantenDetailScreenState extends State<BantenDetailScreen> {
         centerTitle: true,
         backgroundColor: Colors.white,
       ),
-      body: FutureBuilder<BantenModel>(
+      body: FutureBuilder<BantenModel?>(
         future: _bantenFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting || _isLoading) {
@@ -135,7 +154,7 @@ class _BantenDetailScreenState extends State<BantenDetailScreen> {
                   children: [
                     Expanded(
                       child: Text(
-                        banten.name,
+                        banten.namaBanten, // Ubah dari banten.name ke banten.namaBanten
                         style: GoogleFonts.inter(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -169,7 +188,7 @@ class _BantenDetailScreenState extends State<BantenDetailScreen> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    banten.description,
+                    banten.deskripsi, // Ubah dari banten.description ke banten.deskripsi
                     style: GoogleFonts.inter(
                       fontSize: 16,
                       height: 1.5,

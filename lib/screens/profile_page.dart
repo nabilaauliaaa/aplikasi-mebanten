@@ -3,7 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../auth/login_screen.dart'; // Update path if needed
-import 'package:intl/intl.dart'; // Untuk format tanggal
+import 'package:intl/intl.dart';
+
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});

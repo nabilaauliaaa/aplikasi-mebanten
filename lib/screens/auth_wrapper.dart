@@ -23,7 +23,7 @@ class AuthWrapper extends StatelessWidget {
           }
           
           // Jika user sudah login
-          return const ExploreScreen(); // Ganti dengan halaman utama aplikasi Anda
+          return const HomeScreen(); // Ganti dengan halaman utama aplikasi Anda
         }
         
         // Menunggu koneksi selesai

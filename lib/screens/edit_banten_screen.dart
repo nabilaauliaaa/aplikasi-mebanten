@@ -17,20 +17,27 @@ class _EditBantenScreenState extends State<EditBantenScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _bantenNameController;
   late TextEditingController _bantenDescController;
+  late TextEditingController _saranaController; // Tambahkan controller untuk sarana
+  late TextEditingController _guddenKeywordController; // Tambahkan controller untuk sumber referensi
   bool _isLoading = false;
   final BantenService _bantenService = BantenService();
   
   @override
   void initState() {
     super.initState();
-    _bantenNameController = TextEditingController(text: widget.banten.name);
-    _bantenDescController = TextEditingController(text: widget.banten.description);
+    // Ubah dari name dan description ke namaBanten dan deskripsi
+    _bantenNameController = TextEditingController(text: widget.banten.namaBanten);
+    _bantenDescController = TextEditingController(text: widget.banten.deskripsi);
+    _saranaController = TextEditingController(text: widget.banten.sarana);
+    _guddenKeywordController = TextEditingController(text: widget.banten.guddenKeyword);
   }
   
   @override
   void dispose() {
     _bantenNameController.dispose();
     _bantenDescController.dispose();
+    _saranaController.dispose();
+    _guddenKeywordController.dispose();
     super.dispose();
   }
   
@@ -44,10 +51,14 @@ class _EditBantenScreenState extends State<EditBantenScreen> {
     });
     
     try {
+      // Perbaiki cara memanggil updateBanten untuk disesuaikan dengan metode di BantenService
       await _bantenService.updateBanten(
-        widget.banten.id!,
-        _bantenNameController.text.trim(),
-        _bantenDescController.text.trim(),
+        bantenId: widget.banten.id!,
+        namaBanten: _bantenNameController.text.trim(),
+        sarana: _saranaController.text.trim(),
+        deskripsi: _bantenDescController.text.trim(),
+        guddenKeyword: _guddenKeywordController.text.trim(),
+        existingImageUrls: widget.banten.photos, // Gunakan photos yang sudah ada
       );
       
       if (mounted) {
@@ -88,80 +99,113 @@ class _EditBantenScreenState extends State<EditBantenScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Edit Detail Banten',
-                style: GoogleFonts.inter(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 20),
-              TextFormField(
-                controller: _bantenNameController,
-                decoration: InputDecoration(
-                  labelText: 'Nama Banten',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Edit Detail Banten',
+                  style: GoogleFonts.inter(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Nama Banten tidak boleh kosong';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _bantenDescController,
-                decoration: InputDecoration(
-                  labelText: 'Deskripsi',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                maxLines: 3,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Deskripsi tidak boleh kosong';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 30),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _updateBanten,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF3FAE82),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
+                const SizedBox(height: 20),
+                // Nama Banten field
+                TextFormField(
+                  controller: _bantenNameController,
+                  decoration: InputDecoration(
+                    labelText: 'Nama Banten',
+                    border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : Text(
-                          'Simpan Perubahan',
-                          style: GoogleFonts.inter(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Nama Banten tidak boleh kosong';
+                    }
+                    return null;
+                  },
                 ),
-              ),
-            ],
+                const SizedBox(height: 16),
+                // Deskripsi field
+                TextFormField(
+                  controller: _bantenDescController,
+                  decoration: InputDecoration(
+                    labelText: 'Deskripsi',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  maxLines: 3,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Deskripsi tidak boleh kosong';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                // Sarana field
+                TextFormField(
+                  controller: _saranaController,
+                  decoration: InputDecoration(
+                    labelText: 'Daerah yang menggunakan',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Daerah tidak boleh kosong';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                // Sumber Referensi field
+                TextFormField(
+                  controller: _guddenKeywordController,
+                  decoration: InputDecoration(
+                    labelText: 'Sumber Referensi',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 30),
+                // Submit button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _updateBanten,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF3FAE82),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Text(
+                            'Simpan Perubahan',
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
