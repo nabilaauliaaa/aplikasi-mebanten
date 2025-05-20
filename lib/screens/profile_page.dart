@@ -1,9 +1,9 @@
-// lib/profile_page.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../services/auth_service.dart';
-import '../models/user_model.dart';
-import '../auth/login_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../auth/login_screen.dart'; // Update path if needed
+import 'package:intl/intl.dart'; // Untuk format tanggal
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -13,72 +13,135 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  final AuthService _authService = AuthService();
-  UserModel? _userData;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  
+  User? get currentUser => _auth.currentUser;
   bool _isLoading = true;
+  Map<String, dynamic>? _userData;
 
   @override
   void initState() {
     super.initState();
-    _loadUserData();
+    _fetchUserData();
   }
 
-  Future<void> _loadUserData() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      UserModel? userData = await _authService.getUserData();
-      setState(() {
-        _userData = userData;
-      });
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading user data: $e')),
-      );
-    } finally {
+  Future<void> _fetchUserData() async {
+    if (currentUser == null) {
       setState(() {
         _isLoading = false;
       });
+      return;
+    }
+    
+    setState(() {
+      _isLoading = true;
+    });
+    
+    try {
+      final docSnapshot = await _firestore.collection('users').doc(currentUser!.uid).get();
+      
+      if (docSnapshot.exists) {
+        setState(() {
+          _userData = docSnapshot.data();
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading profile: ${e.toString()}')),
+      );
+    }
+  }
+
+  // Format timestamp menjadi string tanggal yang dapat dibaca
+  String _formatDate(dynamic timestamp) {
+    if (timestamp == null) return 'N/A';
+    
+    try {
+      if (timestamp is Timestamp) {
+        DateTime dateTime = timestamp.toDate();
+        return DateFormat('dd MMM yyyy').format(dateTime);
+      }
+      return 'N/A';
+    } catch (e) {
+      return 'N/A';
     }
   }
 
   Future<void> _signOut() async {
     try {
-      await _authService.signOut();
-      
-      if (mounted) {
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
-          (route) => false,
-        );
-      }
+      await _auth.signOut();
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        (route) => false,
+      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error signing out: $e')),
+        SnackBar(content: Text('Error signing out: ${e.toString()}')),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (currentUser == null) {
+      // If no user is logged in, show login prompt
+      return Scaffold(
+        appBar: AppBar(
+          title: Text('Profile'),
+          centerTitle: true,
+          backgroundColor: Colors.white,
+          iconTheme: IconThemeData(color: Colors.black),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'You are not logged in',
+                style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (context) => const LoginScreen()),
+                  );
+                },
+                child: Text('Log In'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profile'),
+        title: Text('Profile'),
         centerTitle: true,
         backgroundColor: Colors.white,
-        iconTheme: const IconThemeData(color: Colors.black),
+        iconTheme: IconThemeData(color: Colors.black),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout, color: Colors.red),
+            icon: Icon(Icons.logout),
             onPressed: _signOut,
           ),
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: CircularProgressIndicator())
           : Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
@@ -89,81 +152,114 @@ class _ProfilePageState extends State<ProfilePage> {
                       CircleAvatar(
                         radius: 40,
                         backgroundColor: Colors.blue.shade100,
-                        child: _userData?.photoUrl != null
-                            ? ClipRRect(
-                                borderRadius: BorderRadius.circular(40),
-                                child: Image.network(
-                                  _userData!.photoUrl!,
-                                  width: 80,
-                                  height: 80,
-                                  fit: BoxFit.cover,
-                                ),
-                              )
-                            : const Icon(Icons.person, size: 40, color: Colors.blue),
+                        backgroundImage: _userData?['photoURL'] != null
+                            ? NetworkImage(_userData!['photoURL'])
+                            : null,
+                        child: _userData?['photoURL'] == null
+                            ? Icon(Icons.person, size: 40, color: Colors.blue)
+                            : null,
                       ),
-                      const SizedBox(width: 16),
+                      SizedBox(width: 16),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            _userData?.name ?? 'User',
+                            _userData?['name'] ?? currentUser?.displayName ?? 'User',
                             style: GoogleFonts.inter(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          SizedBox(height: 4),
                           Text(
-                            _userData?.email ?? 'user@example.com',
+                            _userData?['username'] ?? currentUser?.email ?? '', // Display username dari Firestore
                             style: GoogleFonts.inter(
                               fontSize: 16,
                               color: Colors.grey,
                             ),
                           ),
+                          SizedBox(height: 4),
+                          Text(
+                            'Joined: ${_formatDate(_userData?['createdAt'])}', // Format createdAt
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
                         ],
                       ),
-                      const Spacer(),
+                      Spacer(),
                       IconButton(
-                        icon: const Icon(Icons.edit, color: Colors.blue),
+                        icon: Icon(Icons.edit, color: Colors.blue),
                         onPressed: () {
                           // Implement edit functionality
-                          // Navigate to edit profile page
                         },
                       ),
                     ],
                   ),
-                  const Divider(),
+                  Divider(),
                   // Settings List
                   Expanded(
                     child: ListView(
                       children: [
-                        _buildListTile('Settings'),
-                        _buildListTile('Terms and condition'),
-                        _buildListTile('Privacy settings'),
-                        _buildListTile('Notifications'),
-                        _buildListTile('Help center'),
-                        _buildListTile('Feedback'),
-                        ListTile(
-                          title: const Text('Logout'),
-                          trailing: const Icon(Icons.logout, color: Colors.red),
-                          onTap: _signOut,
-                        ),
+                        _buildListTile('My Banten', Icons.list, () {
+                          // Navigate to user's Banten list - implement BantenListPage
+                          // Navigator.push(context, MaterialPageRoute(builder: (context) => BantenListPage()));
+                        }),
+                        _buildListTile('Settings', Icons.settings, () {}),
+                        _buildListTile('Terms and condition', Icons.description, () {}),
+                        _buildListTile('Privacy settings', Icons.privacy_tip, () {}),
+                        _buildListTile('Notifications', Icons.notifications, () {}),
+                        _buildListTile('Help center', Icons.help, () {}),
+                        _buildListTile('Feedback', Icons.feedback, () {}),
+                        _buildListTile('Logout', Icons.logout, _signOut),
                       ],
                     ),
                   ),
                 ],
               ),
             ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: 2, // Profile tab
+        onTap: (index) {
+          if (index == 0) {
+            // Navigate to Home/Explore page
+            Navigator.of(context).popUntil((route) => route.isFirst);
+          } else if (index == 1) {
+            // Navigate to Add page - implement navigation to TambahBantenPage
+            // Navigator.push(context, MaterialPageRoute(builder: (context) => TambahBantenPage()));
+          }
+        },
+        items: [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.explore),
+            label: 'Explore',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.add),
+            label: 'Add',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Profile',
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildListTile(String title) {
+  Widget _buildListTile(String title, IconData icon, VoidCallback onTap) {
     return ListTile(
-      title: Text(title),
-      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-      onTap: () {
-        // Handle tap on each setting
-      },
+      leading: Icon(icon, color: Colors.grey[700]),
+      title: Text(
+        title,
+        style: GoogleFonts.inter(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      trailing: Icon(Icons.arrow_forward_ios, size: 16),
+      onTap: onTap,
     );
   }
 }

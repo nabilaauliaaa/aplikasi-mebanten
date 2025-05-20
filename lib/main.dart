@@ -1,10 +1,15 @@
+// lib/main.dart
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:apk_mebanten/screens/splash_screen.dart';
+import 'services/firebase_service.dart';
+import 'screens/splash_screen.dart';
 
 void main() async {
+  // Pastikan Flutter engine diinisialisasi
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  
+  // Inisialisasi Firebase
+  await FirebaseService.initialize();
+  
   runApp(const MyApp());
 }
 
@@ -14,12 +19,17 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Mebanten App',
+      title: 'Mebanten',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        primaryColor: const Color(0xFF53B493),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF53B493),
+          primary: const Color(0xFF53B493),
+        ),
+        // Tema lainnya
       ),
-      debugShowCheckedModeBanner: false,
       home: const SplashScreen(),
+      debugShowCheckedModeBanner: false,
     );
   }
 }

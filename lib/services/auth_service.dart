@@ -1,87 +1,87 @@
 // lib/services/auth_service.dart
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/user_model.dart';
+import 'firebase_service.dart';
 
 class AuthService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  final FirebaseAuth _auth = FirebaseService.instance.auth;
+  final FirebaseFirestore _firestore = FirebaseService.instance.firestore;
   
-  // Mendapatkan user saat ini
+  // Current user
   User? get currentUser => _auth.currentUser;
   
-  // Stream untuk mendapatkan status autentikasi
+  // Auth state changes
   Stream<User?> get authStateChanges => _auth.authStateChanges();
   
-  // Mendaftarkan user baru
-  Future<UserCredential> registerWithEmailAndPassword({
-    required String name,
-    required String email,
-    required String password,
-  }) async {
+  // Sign in with email and password
+  Future<UserCredential> signInWithEmailAndPassword(String email, String password) async {
     try {
-      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+      final userCredential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
       
-      // Simpan data user di Firestore
-      await _createUserInFirestore(userCredential.user!.uid, name, email);
+      // Update lastLoginAt timestamp
+      await _firestore.collection('users').doc(userCredential.user!.uid).update({
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
       
       return userCredential;
     } catch (e) {
+      print('Error signing in: $e');
       rethrow;
     }
   }
   
-  // Membuat data user di Firestore
-  Future<void> _createUserInFirestore(String uid, String name, String email) async {
-    UserModel user = UserModel(
-      uid: uid,
-      name: name,
-      email: email,
-    );
-    
-    await _firestore.collection('users').doc(uid).set(user.toJson());
-  }
-  
-  // Login dengan email dan password
-  Future<UserCredential> signInWithEmailAndPassword({
-    required String email,
-    required String password,
-  }) async {
+  // Register with email and password
+  Future<UserCredential> registerWithEmailAndPassword(
+    String email, 
+    String password, 
+    String name,
+  ) async {
     try {
-      UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+      // Create user in Firebase Auth
+      final userCredential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
       
-      // Opsional: simpan info login di secure storage
-      await _storage.write(key: 'uid', value: userCredential.user!.uid);
+      // Generate username
+      final username = '@${name.toLowerCase().replaceAll(' ', '')}${DateTime.now().millisecondsSinceEpoch.toString().substring(9)}';
+      
+      // Create user document in Firestore
+      await _firestore.collection('users').doc(userCredential.user!.uid).set({
+        'uid': userCredential.user!.uid,
+        'name': name,
+        'email': email,
+        'username': username,
+        'photoURL': null,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      
+      // Update display name in Auth
+      await userCredential.user!.updateDisplayName(name);
       
       return userCredential;
     } catch (e) {
+      print('Error registering user: $e');
       rethrow;
     }
   }
   
-  // Logout
+  // Sign out
   Future<void> signOut() async {
-    await _storage.delete(key: 'uid');
     await _auth.signOut();
   }
   
-  // Mengambil data user dari Firestore
-  Future<UserModel?> getUserData() async {
+  // Get user data
+  Future<UserModel?> getUserData(String userId) async {
     try {
-      String uid = currentUser?.uid ?? '';
-      if (uid.isEmpty) return null;
-      
-      DocumentSnapshot doc = await _firestore.collection('users').doc(uid).get();
+      final doc = await _firestore.collection('users').doc(userId).get();
       if (doc.exists) {
-        return UserModel.fromJson(doc.data() as Map<String, dynamic>);
+        return UserModel.fromJson(doc.data()!);
       }
       return null;
     } catch (e) {
@@ -91,12 +91,23 @@ class AuthService {
   }
   
   // Update user data
-  Future<void> updateUserData(Map<String, dynamic> data) async {
+  Future<void> updateUserData(String userId, Map<String, dynamic> data) async {
     try {
-      String uid = currentUser?.uid ?? '';
-      if (uid.isEmpty) return;
+      // Add updatedAt timestamp
+      data['updatedAt'] = FieldValue.serverTimestamp();
       
-      await _firestore.collection('users').doc(uid).update(data);
+      await _firestore.collection('users').doc(userId).update(data);
+      
+      // Update Auth profile if needed
+      final currentUser = _auth.currentUser;
+      if (currentUser != null) {
+        if (data.containsKey('name')) {
+          await currentUser.updateDisplayName(data['name']);
+        }
+        if (data.containsKey('photoURL')) {
+          await currentUser.updatePhotoURL(data['photoURL']);
+        }
+      }
     } catch (e) {
       print('Error updating user data: $e');
       rethrow;

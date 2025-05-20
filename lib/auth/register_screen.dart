@@ -1,10 +1,8 @@
-// lib/auth/register_screen.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import './login_screen.dart';
-import '../services/auth_service.dart';
-import '../screens/home_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -23,7 +21,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _agreeToTerms = false;
   bool _isLoading = false;
   String? _errorMessage;
-  final AuthService _authService = AuthService();
+  
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   @override
   void dispose() {
@@ -33,63 +33,65 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _confirmPasswordController.dispose();
     super.dispose();
   }
-
+  
+  // Function to handle registration - REVISI
   Future<void> _register() async {
-    // Validasi form
-    if (_nameController.text.trim().isEmpty ||
-        _emailController.text.trim().isEmpty ||
-        _passwordController.text.isEmpty) {
-      setState(() {
-        _errorMessage = 'Please fill all required fields.';
-      });
-      return;
-    }
-
+    // Validate passwords match
     if (_passwordController.text != _confirmPasswordController.text) {
       setState(() {
-        _errorMessage = 'Passwords do not match.';
+        _errorMessage = 'Passwords do not match';
       });
       return;
     }
-
-    if (_passwordController.text.length < 6) {
-      setState(() {
-        _errorMessage = 'Password must be at least 6 characters.';
-      });
-      return;
-    }
-
-    if (!_agreeToTerms) {
-      setState(() {
-        _errorMessage = 'You must agree to the Terms and Conditions.';
-      });
-      return;
-    }
-
+    
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
-
+    
     try {
-      await _authService.registerWithEmailAndPassword(
-        name: _nameController.text.trim(),
+      // 1. Create user with email and password
+      final userCredential = await _auth.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
-        password: _passwordController.text,
+        password: _passwordController.text.trim(),
       );
-
-      // Navigate to home if registration successful
-      if (mounted) {
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-          (route) => false,
+      
+      // 2. If user created successfully, save additional user data
+      if (userCredential.user != null) {
+        // 3. Generate username unik
+        final username = '@${_nameController.text.trim().toLowerCase().replaceAll(' ', '')}${DateTime.now().millisecondsSinceEpoch.toString().substring(9)}';
+        
+        // 4. Simpan data user ke Firestore
+        await _firestore.collection('users').doc(userCredential.user!.uid).set({
+          'uid': userCredential.user!.uid,           // Tambahkan uid untuk referensi
+          'name': _nameController.text.trim(),       // Nama user
+          'email': _emailController.text.trim(),     // Email user
+          'username': username,                      // Username yang digenerate
+          'photoURL': null,                          // Awalnya tidak ada foto
+          'createdAt': FieldValue.serverTimestamp(), // Waktu pembuatan akun
+          'updatedAt': FieldValue.serverTimestamp(), // Sama dengan createdAt untuk akun baru
+        });
+        
+        // 5. Update display name di Firebase Auth
+        await userCredential.user!.updateDisplayName(_nameController.text.trim());
+        
+        // 6. Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Registration successful. Please log in.')),
+        );
+        
+        // 7. Navigate to login screen
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
         );
       }
     } on FirebaseAuthException catch (e) {
       String message;
       
       switch (e.code) {
+        case 'weak-password':
+          message = 'The password is too weak.';
+          break;
         case 'email-already-in-use':
           message = 'The email address is already in use.';
           break;
@@ -98,9 +100,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
           break;
         case 'operation-not-allowed':
           message = 'Email/password accounts are not enabled.';
-          break;
-        case 'weak-password':
-          message = 'The password is too weak.';
           break;
         default:
           message = 'An error occurred. Please try again.';
@@ -111,8 +110,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       });
     } catch (e) {
       setState(() {
-        _errorMessage = 'An unexpected error occurred. Please try again.';
+        _errorMessage = 'An error occurred. Please try again.';
       });
+      print('Error during registration: $e'); // Logging untuk debugging
     } finally {
       setState(() {
         _isLoading = false;
@@ -159,36 +159,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   color: Colors.grey[600],
                 ),
               ),
-              SizedBox(height: screenHeight * 0.02),
-              
-              // Error message jika ada
-              if (_errorMessage != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  margin: const EdgeInsets.only(bottom: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.red.shade200),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.error_outline, color: Colors.red.shade700, size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _errorMessage!,
-                          style: GoogleFonts.inter(
-                            color: Colors.red.shade700,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(height: screenHeight * 0.02),
-              ],
+              SizedBox(height: screenHeight * 0.03),
               
               // Name field
               Text(
@@ -312,15 +283,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
               SizedBox(height: screenHeight * 0.025),
               
               // Confirm Password field
-              Text(
-                'Confirm Password',
-                style: GoogleFonts.inter(
-                  fontSize: screenHeight * 0.018,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black87,
-                ),
-              ),
-              SizedBox(height: screenHeight * 0.01),
               SizedBox(
                 height: screenHeight * 0.06,
                 child: TextField(
@@ -359,6 +321,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               SizedBox(height: screenHeight * 0.02),
               
+              // Error message
+              if (_errorMessage != null)
+                Padding(
+                  padding: EdgeInsets.only(bottom: screenHeight * 0.01),
+                  child: Text(
+                    _errorMessage!,
+                    style: GoogleFonts.inter(
+                      color: Colors.red,
+                      fontSize: screenHeight * 0.016,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              
               // Terms and conditions checkbox
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -373,44 +349,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     activeColor: const Color(0xFF3FAE82),
                   ),
                   Expanded(
-                    child: RichText(
-                      text: TextSpan(
-                        style: GoogleFonts.inter(
-                          color: Colors.grey[600],
-                          fontSize: screenHeight * 0.018,
-                        ),
-                        children: [
-                          const TextSpan(text: "I've read and agree with the "),
-                          WidgetSpan(
-                            child: GestureDetector(
-                              onTap: () {
-                                // Handle terms and conditions tap
-                              },
-                              child: Text(
-                                'Terms and Conditions',
-                                style: GoogleFonts.inter(
-                                  color: const Color(0xFF3FAE82),
-                                  decoration: TextDecoration.underline,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const TextSpan(text: ' and the '),
-                          WidgetSpan(
-                            child: GestureDetector(
-                              onTap: () {
-                                // Handle privacy policy tap
-                              },
-                              child: Text(
-                                'Privacy Policy',
-                                style: GoogleFonts.inter(
-                                  color: const Color(0xFF3FAE82),
-                                  decoration: TextDecoration.underline,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                    child: Text(
+                      "I've read and agree with the Terms and Conditions and the Privacy Policy",
+                      style: GoogleFonts.inter(
+                        color: Colors.grey[600],
+                        fontSize: screenHeight * 0.014,
                       ),
                     ),
                   ),
@@ -423,7 +366,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 width: double.infinity,
                 height: screenHeight * 0.06,
                 child: ElevatedButton(
-                  onPressed: _isLoading ? null : (_agreeToTerms ? _register : null),
+                  onPressed: (_agreeToTerms && !_isLoading) ? _register : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF3FAE82),
                     disabledBackgroundColor: Colors.grey[300],
@@ -432,20 +375,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     elevation: 0,
                   ),
-                  child: _isLoading 
-                    ? const SizedBox(
-                        height: 20, 
-                        width: 20, 
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
-                      )
-                    : Text(
-                        'Sign Up',
-                        style: GoogleFonts.inter(
-                          fontSize: screenHeight * 0.022,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
+                  child: _isLoading
+                      ? SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : Text(
+                          'Sign Up',
+                          style: GoogleFonts.inter(
+                            fontSize: screenHeight * 0.022,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
                         ),
-                      ),
                 ),
               ),
               SizedBox(height: screenHeight * 0.025),
@@ -481,7 +427,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
               ),
-              SizedBox(height: screenHeight * 0.025),
             ],
           ),
         ),

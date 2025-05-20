@@ -1,13 +1,19 @@
-// lib/auth/login_screen.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import './register_screen.dart';
-import '../services/auth_service.dart';
-import '../screens/home_screen.dart'; // Anda perlu membuat halaman ini
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../screens/welcome_screen.dart'; // Adjust import path as needed
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final String? message;
+  final String? routeAfterLogin;
+  
+  const LoginScreen({
+    super.key,
+    this.message,
+    this.routeAfterLogin,
+  });
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -18,8 +24,23 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
   bool _isLoading = false;
-  final AuthService _authService = AuthService();
   String? _errorMessage;
+  
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    // Tampilkan message jika ada
+    if (widget.message != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(widget.message!)),
+        );
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -27,33 +48,44 @@ class _LoginScreenState extends State<LoginScreen> {
     _passwordController.dispose();
     super.dispose();
   }
-
+  
+  // Function to handle login - Revised
   Future<void> _login() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
-
+    
     try {
-      if (_emailController.text.trim().isEmpty || _passwordController.text.isEmpty) {
-        throw FirebaseAuthException(
-          code: 'invalid-input',
-          message: 'Email and password cannot be empty'
-        );
-      }
-      
-      await _authService.signInWithEmailAndPassword(
+      // 1. Login dengan Firebase Authentication
+      final userCredential = await _auth.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
-        password: _passwordController.text,
+        password: _passwordController.text.trim(),
       );
-
-      // Navigate to home if login successful
-      if (mounted) {
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => HomeScreen()),
-          (route) => false,
-        );
+      
+      // 2. User berhasil login
+      if (userCredential.user != null) {
+        // 3. Update updatedAt di Firestore
+        try {
+          await _firestore.collection('users').doc(userCredential.user!.uid).update({
+            'updatedAt': FieldValue.serverTimestamp(), // Update timestamp
+          });
+        } catch (e) {
+          // Jika gagal update, itu bukan masalah fatal
+          print('Warning: Could not update user timestamp: $e');
+        }
+        
+        // 4. Navigate sesuai parameter atau ke home
+        if (widget.routeAfterLogin == 'add_banten') {
+          // Jika ditentukan untuk pergi ke add_banten
+          Navigator.of(context).pushNamedAndRemoveUntil('/add_banten', (route) => false);
+        } else {
+          // Default navigasi ke Welcome Screen
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const WelcomeScreen()),
+            (route) => false,
+          );
+        }
       }
     } on FirebaseAuthException catch (e) {
       String message;
@@ -66,13 +98,10 @@ class _LoginScreenState extends State<LoginScreen> {
           message = 'Wrong password provided.';
           break;
         case 'invalid-email':
-          message = 'The email address is not valid.';
+          message = 'Email address is not valid.';
           break;
         case 'user-disabled':
           message = 'This user has been disabled.';
-          break;
-        case 'invalid-input':
-          message = e.message ?? 'Please fill all fields.';
           break;
         default:
           message = 'An error occurred. Please try again.';
@@ -83,8 +112,9 @@ class _LoginScreenState extends State<LoginScreen> {
       });
     } catch (e) {
       setState(() {
-        _errorMessage = 'An unexpected error occurred.';
+        _errorMessage = 'An error occurred. Please try again.';
       });
+      print('Error during login: $e'); // Logging untuk debugging
     } finally {
       setState(() {
         _isLoading = false;
@@ -149,36 +179,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             color: Colors.black,
                           ),
                         ),
-                        SizedBox(height: screenHeight * 0.01),
-                        
-                        // Error message jika ada
-                        if (_errorMessage != null) ...[
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            margin: const EdgeInsets.only(bottom: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.red.shade50,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.red.shade200),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(Icons.error_outline, color: Colors.red.shade700, size: 20),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    _errorMessage!,
-                                    style: GoogleFonts.inter(
-                                      color: Colors.red.shade700,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                        
                         SizedBox(height: screenHeight * 0.02),
                         
                         // Email field
@@ -187,7 +187,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: TextField(
                             controller: _emailController,
                             style: GoogleFonts.inter(),
-                            keyboardType: TextInputType.emailAddress,
                             decoration: InputDecoration(
                               hintText: 'Email Address',
                               hintStyle: GoogleFonts.inter(color: Colors.grey[500]),
@@ -240,9 +239,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         Align(
                           alignment: Alignment.centerLeft,
                           child: TextButton(
-                            onPressed: () {
-                              // Implementasi reset password akan ditambahkan nanti
-                            },
+                            onPressed: () {},
                             child: Text(
                               'Forgot password?',
                               style: GoogleFonts.inter(
@@ -253,6 +250,20 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         SizedBox(height: screenHeight * 0.02),
+                        
+                        // Error message
+                        if (_errorMessage != null)
+                          Padding(
+                            padding: EdgeInsets.only(bottom: screenHeight * 0.01),
+                            child: Text(
+                              _errorMessage!,
+                              style: GoogleFonts.inter(
+                                color: Colors.red,
+                                fontSize: screenHeight * 0.018,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
                         
                         // Login button
                         SizedBox(
@@ -267,20 +278,23 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               elevation: 0,
                             ),
-                            child: _isLoading 
-                              ? const SizedBox(
-                                  height: 20, 
-                                  width: 20, 
-                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
-                                )
-                              : Text(
-                                  'Login',
-                                  style: GoogleFonts.inter(
-                                    fontSize: screenHeight * 0.022,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
+                            child: _isLoading
+                                ? SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : Text(
+                                    'Login',
+                                    style: GoogleFonts.inter(
+                                      fontSize: screenHeight * 0.022,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
                                   ),
-                                ),
                           ),
                         ),
                         SizedBox(height: screenHeight * 0.02),
@@ -356,30 +370,25 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildSocialButton(Color color, IconData? icon, double screenHeight, {String? text}) {
-    return InkWell(
-      onTap: () {
-        // Implementasi social login akan ditambahkan nanti
-      },
-      child: Container(
-        width: screenHeight * 0.06,
-        height: screenHeight * 0.06,
-        decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
-        ),
-        child: icon != null 
-          ? Icon(icon, color: Colors.white, size: screenHeight * 0.035)
-          : Center(
-              child: Text(
-                text ?? '',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: screenHeight * 0.035,
-                  fontWeight: FontWeight.bold,
-                ),
+    return Container(
+      width: screenHeight * 0.06,
+      height: screenHeight * 0.06,
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
+      ),
+      child: icon != null 
+        ? Icon(icon, color: Colors.white, size: screenHeight * 0.035)
+        : Center(
+            child: Text(
+              text ?? '',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: screenHeight * 0.035,
+                fontWeight: FontWeight.bold,
               ),
             ),
-      ),
+          ),
     );
   }
 }

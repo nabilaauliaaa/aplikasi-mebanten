@@ -32,7 +32,7 @@ dependencies:
     sdk: flutter
   firebase_core: ^2.26.0
   firebase_auth: ^4.20.0
-  cloud_firestore: ^4.15.8
+  cloud_firestore: ^4.17.5
   flutter_secure_storage: ^9.0.0
   
 
@@ -41,6 +41,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   google_fonts: ^6.2.1
   logger: ^2.5.0
+  uid: ^0.0.2
  
 
 dev_dependencies:
