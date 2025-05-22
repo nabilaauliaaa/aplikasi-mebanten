@@ -42,7 +42,6 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       body: StreamBuilder<QuerySnapshot>(
-        // Ubah dari mengharapkan Stream<List<BantenModel>> menjadi StreamBuilder<QuerySnapshot>
         stream: _bantenService.getAllBantens(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -101,16 +100,55 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // FIXED: Tampilkan gambar jika ada (sesuai dengan photos array dari tambahbanten)
+                        if (banten.photos.isNotEmpty)
+                          Container(
+                            height: 200,
+                            width: double.infinity,
+                            margin: const EdgeInsets.only(bottom: 12),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                banten.photos.first,
+                                fit: BoxFit.cover,
+                                loadingBuilder: (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return const Center(
+                                    child: CircularProgressIndicator(),
+                                  );
+                                },
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    color: Colors.grey[200],
+                                    child: const Center(
+                                      child: Icon(
+                                        Icons.broken_image,
+                                        color: Colors.grey,
+                                        size: 50,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        
+                        // FIXED: Menggunakan field namaBanten (konsisten dengan BantenModel)
                         Text(
-                          banten.namaBanten, // Ubah dari name ke namaBanten
+                          banten.namaBanten,
                           style: GoogleFonts.inter(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         const SizedBox(height: 8),
+                        
+                        // FIXED: Menggunakan field description (konsisten dengan BantenModel)
                         Text(
-                          banten.deskripsi, // Ubah dari description ke deskripsi
+                          banten.description,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.inter(
@@ -119,11 +157,45 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                         const SizedBox(height: 8),
+                        
+                        // ADDED: Informasi daerah (daerah field)
+                        if (banten.daerah.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 4),
+                            child: Row(
+                              children: [
+                                Icon(Icons.location_on, 
+                                     size: 16, 
+                                     color: Colors.grey[600]),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    banten.daerah,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        
+                        // User info
                         Text(
                           'Dibuat oleh: ${banten.userName}',
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             color: Colors.grey[600],
+                          ),
+                        ),
+                        
+                        // ADDED: Timestamp display
+                        Text(
+                          'Ditambahkan: ${_formatDate(banten.createdAt)}',
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            color: Colors.grey[500],
                           ),
                         ),
                       ],
@@ -140,11 +212,21 @@ class _HomeScreenState extends State<HomeScreen> {
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const TambahBantenPage()), // Ubah nama class sesuai dengan class yang benar
+            MaterialPageRoute(builder: (context) => const TambahBantenPage()),
           );
         },
         child: const Icon(Icons.add, color: Colors.white),
       ),
     );
+  }
+  
+  // ADDED: Helper method untuk format tanggal
+  String _formatDate(DateTime dateTime) {
+    final months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    
+    return '${dateTime.day} ${months[dateTime.month - 1]} ${dateTime.year}';
   }
 }

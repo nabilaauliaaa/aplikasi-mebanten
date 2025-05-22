@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../auth/login_screen.dart'; // Import login screen
+import '../auth/login_screen.dart';
 import 'dart:io';
 
 class TambahBantenPage extends StatefulWidget {
@@ -16,6 +16,7 @@ class TambahBantenPage extends StatefulWidget {
 class _TambahBantenPageState extends State<TambahBantenPage> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _namaBantenController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController(); // ADDED: Missing controller
   final TextEditingController _sejarahController = TextEditingController();
   final TextEditingController _daerahController = TextEditingController();
   final TextEditingController _sumberReferensiController = TextEditingController();
@@ -34,15 +35,12 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
   @override
   void initState() {
     super.initState();
-    // Pastikan pengguna sudah login saat halaman dibuka
     _checkAuth();
   }
 
-  // Fungsi untuk memeriksa apakah pengguna sudah login
   void _checkAuth() {
     final user = _auth.currentUser;
     if (user == null) {
-      // Jika belum login, arahkan ke halaman login
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Anda harus login terlebih dahulu'))
@@ -57,6 +55,7 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
   @override
   void dispose() {
     _namaBantenController.dispose();
+    _descriptionController.dispose(); // ADDED: Missing dispose
     _sejarahController.dispose();
     _daerahController.dispose();
     _sumberReferensiController.dispose();
@@ -71,7 +70,6 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
       if (image != null) {
         setState(() {
           _selectedImage = File(image.path);
-          // Reset preview image URL jika gambar baru dipilih
           _previewImageUrl = null;
         });
       }
@@ -88,7 +86,6 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
     if (url.isNotEmpty) {
       setState(() {
         _previewImageUrl = url;
-        // Reset selected image jika menggunakan URL
         _selectedImage = null;
       });
     } else {
@@ -100,12 +97,10 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
   
   // Function to upload image and get URL
   Future<String?> _uploadImage() async {
-    // If using link directly, return the link
     if (_selectedImage == null && _imageLinkController.text.isNotEmpty) {
       return _imageLinkController.text.trim();
     }
     
-    // If selected image is null and no link, return null
     if (_selectedImage == null) {
       return null;
     }
@@ -126,7 +121,6 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
   
   // Function to save data to Firestore
   Future<void> _saveBantenData() async {
-    // Check if user is logged in
     final User? currentUser = _auth.currentUser;
     if (currentUser == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -147,7 +141,7 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
     });
     
     try {
-      // 1. Get user data to get username
+      // 1. Get user data
       DocumentSnapshot userDoc = await _firestore.collection('users').doc(currentUser.uid).get();
       Map<String, dynamic>? userData = userDoc.exists ? userDoc.data() as Map<String, dynamic> : null;
       
@@ -167,14 +161,15 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
         photos.add(imageUrl);
       }
       
-      // 4. Save data to Firestore - using 'bantens' collection as in your Firestore
+      // 4. Save data to Firestore - FIXED: Field mapping sesuai Firebase dan BantenModel
       await _firestore.collection('bantens').add({
         'userId': currentUser.uid,
-        'namaBanten': _namaBantenController.text,
-        'deskripsi': _sejarahController.text, // Field for 'sejarah'
-        'sarana': _daerahController.text,     // Field for 'daerah yang menggunakan'
-        'guddenKeyword': _sumberReferensiController.text,  // Field for 'sumber referensi'
-        'photos': photos,                     // Array of photo URLs
+        'namaBanten': _namaBantenController.text.trim(), // Konsisten dengan BantenModel
+        'description': _descriptionController.text.trim(),    // FIXED: Menggunakan _descriptionController
+        'sejarah': _sejarahController.text.trim(),        // FIXED: Field sejarah terpisah
+        'daerah': _daerahController.text.trim(),          // Field daerah -> daerah
+        'guddenKeyword': _sumberReferensiController.text.trim(),
+        'photos': photos,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
         'userName': userData?['name'] ?? currentUser.displayName ?? 'Anonymous',
@@ -186,7 +181,6 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
         const SnackBar(content: Text('Banten berhasil disimpan')),
       );
       
-      // Navigate back after successful save
       Navigator.of(context).pop();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -201,7 +195,6 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Jika pengguna tidak login, tidak perlu render UI
     if (_auth.currentUser == null) {
       return const Scaffold(
         body: Center(
@@ -211,11 +204,22 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
     }
     
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text("Add Banten"),
+        title: const Text(
+          "Add Banten",
+          style: TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        centerTitle: true,
         elevation: 0,
         backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
       ),
       body: Form(
         key: _formKey,
@@ -224,10 +228,10 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Nama Banten
+              // Nama Banten Field
               _buildTextField(
                 controller: _namaBantenController,
-                label: 'Nama Banten',
+                hintText: 'Nama Banten',
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Mohon isi nama banten';
@@ -237,10 +241,24 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
               ),
               const SizedBox(height: 16),
               
-              // Sejarah
+              // ADDED: description Field (sesuai UI Figma)
+              _buildTextField(
+                controller: _descriptionController,
+                hintText: 'description',
+                maxLines: 3,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Mohon isi description';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              
+              // Sejarah Field
               _buildTextField(
                 controller: _sejarahController,
-                label: 'Sejarah',
+                hintText: 'Sejarah',
                 maxLines: 5,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -251,10 +269,10 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
               ),
               const SizedBox(height: 16),
               
-              // Daerah yang menggunakan
+              // Daerah yang menggunakan Field
               _buildTextField(
                 controller: _daerahController,
-                label: 'Daerah yang menggunakan',
+                hintText: 'Daerah yang menggunakan',
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Mohon isi daerah';
@@ -264,10 +282,10 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
               ),
               const SizedBox(height: 16),
               
-              // Sumber Referensi
+              // Sumber Referensi Field
               _buildTextField(
                 controller: _sumberReferensiController,
-                label: 'Sumber Referensi',
+                hintText: 'Sumber Referensi',
               ),
               const SizedBox(height: 16),
               
@@ -278,13 +296,13 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
                   height: 150,
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
-                    borderRadius: BorderRadius.circular(8),
+                    color: const Color(0xFFE3F2FD),
+                    borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: Colors.grey.shade300),
                   ),
                   child: _selectedImage != null
                       ? ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(12),
                           child: Image.file(
                             _selectedImage!,
                             fit: BoxFit.cover,
@@ -292,23 +310,18 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
                         )
                       : _previewImageUrl != null
                           ? ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(12),
                               child: Image.network(
                                 _previewImageUrl!,
                                 fit: BoxFit.cover,
                                 loadingBuilder: (context, child, loadingProgress) {
                                   if (loadingProgress == null) return child;
-                                  return Center(
-                                    child: CircularProgressIndicator(
-                                      value: loadingProgress.expectedTotalBytes != null
-                                          ? loadingProgress.cumulativeBytesLoaded / 
-                                            (loadingProgress.expectedTotalBytes ?? 1)
-                                          : null,
-                                    ),
+                                  return const Center(
+                                    child: CircularProgressIndicator(),
                                   );
                                 },
                                 errorBuilder: (context, error, stackTrace) {
-                                  return Center(
+                                  return const Center(
                                     child: Column(
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
@@ -324,63 +337,59 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
                             )
                           : const Center(
                               child: Icon(
-                                Icons.image,
+                                Icons.image_outlined,
                                 size: 50,
-                                color: Colors.blue,
+                                color: Color(0xFF64B5F6),
                               ),
                             ),
                 ),
               ),
               const SizedBox(height: 16),
               
-              // Image Link input with preview button
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildTextField(
-                      controller: _imageLinkController,
-                      label: 'Paste the image link',
-                      hint: 'Optional: jika ada URL gambar',
-                    ),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.preview, color: Colors.blue),
-                    onPressed: _previewLinkImage,
-                    tooltip: 'Preview image',
-                  ),
-                ],
+              // Paste the image link Field
+              _buildTextField(
+                controller: _imageLinkController,
+                hintText: 'Paste the image link',
+                onChanged: (value) {
+                  if (value.isNotEmpty) {
+                    _previewLinkImage();
+                  }
+                },
               ),
-              
               const SizedBox(height: 32),
               
-              // Submit Button
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: _isUploading ? null : _saveBantenData,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF53B493),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+              // Posting Button
+              Center(
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: _isUploading ? null : _saveBantenData,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF4CAF50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      elevation: 0,
                     ),
+                    child: _isUploading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text(
+                            'Posting',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
                   ),
-                  child: _isUploading // Menggunakan _isUploading, bukan _isLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : const Text(
-                          'Posting',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
                 ),
               ),
             ],
@@ -388,14 +397,15 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 1, // Add tab
+        type: BottomNavigationBarType.fixed,
+        currentIndex: 1,
+        selectedItemColor: const Color(0xFF4CAF50),
+        unselectedItemColor: Colors.grey,
         onTap: (index) {
           if (index == 0) {
-            // Navigate to Explore
             Navigator.of(context).popUntil((route) => route.isFirst);
           } else if (index == 2) {
             // Navigate to Profile
-            // Navigator.push(context, MaterialPageRoute(builder: (context) => ProfilePage()));
           }
         },
         items: const [
@@ -416,29 +426,39 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
     );
   }
   
-  // Helper method to build consistent text fields
+  // Helper method to build text fields
   Widget _buildTextField({
     required TextEditingController controller,
-    required String label,
-    String? hint,
+    required String hintText,
     int maxLines = 1,
     String? Function(String?)? validator,
+    void Function(String)? onChanged,
   }) {
     return TextFormField(
       controller: controller,
       maxLines: maxLines,
+      onChanged: onChanged,
       decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
+        hintText: hintText,
+        hintStyle: TextStyle(color: Colors.grey[500]),
+        filled: true,
+        fillColor: Colors.grey[50],
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey[300]!),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey[300]!),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF4CAF50), width: 2),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16, 
+          vertical: 16
+        ),
       ),
       validator: validator,
     );

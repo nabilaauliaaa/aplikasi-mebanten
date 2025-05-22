@@ -144,7 +144,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Image.asset(
                       'assets/images/kedua.png',
                       height: screenHeight * 0.2,
-                      width: screenWidth * 0.4,
+                      width: screenWidth * 0.6,
                       fit: BoxFit.contain,
                     ),
                   ),

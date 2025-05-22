@@ -17,7 +17,7 @@ class _EditBantenScreenState extends State<EditBantenScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _bantenNameController;
   late TextEditingController _bantenDescController;
-  late TextEditingController _saranaController; // Tambahkan controller untuk sarana
+  late TextEditingController _daerahController; // Tambahkan controller untuk daerah
   late TextEditingController _guddenKeywordController; // Tambahkan controller untuk sumber referensi
   bool _isLoading = false;
   final BantenService _bantenService = BantenService();
@@ -25,10 +25,10 @@ class _EditBantenScreenState extends State<EditBantenScreen> {
   @override
   void initState() {
     super.initState();
-    // Ubah dari name dan description ke namaBanten dan deskripsi
+    // Ubah dari name dan description ke namaBanten dan description
     _bantenNameController = TextEditingController(text: widget.banten.namaBanten);
-    _bantenDescController = TextEditingController(text: widget.banten.deskripsi);
-    _saranaController = TextEditingController(text: widget.banten.sarana);
+    _bantenDescController = TextEditingController(text: widget.banten.description);
+    _daerahController = TextEditingController(text: widget.banten.daerah);
     _guddenKeywordController = TextEditingController(text: widget.banten.guddenKeyword);
   }
   
@@ -36,7 +36,7 @@ class _EditBantenScreenState extends State<EditBantenScreen> {
   void dispose() {
     _bantenNameController.dispose();
     _bantenDescController.dispose();
-    _saranaController.dispose();
+    _daerahController.dispose();
     _guddenKeywordController.dispose();
     super.dispose();
   }
@@ -55,8 +55,8 @@ class _EditBantenScreenState extends State<EditBantenScreen> {
       await _bantenService.updateBanten(
         bantenId: widget.banten.id!,
         namaBanten: _bantenNameController.text.trim(),
-        sarana: _saranaController.text.trim(),
-        deskripsi: _bantenDescController.text.trim(),
+        daerah: _daerahController.text.trim(),
+        description: _bantenDescController.text.trim(),
         guddenKeyword: _guddenKeywordController.text.trim(),
         existingImageUrls: widget.banten.photos, // Gunakan photos yang sudah ada
       );
@@ -128,11 +128,11 @@ class _EditBantenScreenState extends State<EditBantenScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
-                // Deskripsi field
+                // description field
                 TextFormField(
                   controller: _bantenDescController,
                   decoration: InputDecoration(
-                    labelText: 'Deskripsi',
+                    labelText: 'description',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -140,15 +140,15 @@ class _EditBantenScreenState extends State<EditBantenScreen> {
                   maxLines: 3,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Deskripsi tidak boleh kosong';
+                      return 'description tidak boleh kosong';
                     }
                     return null;
                   },
                 ),
                 const SizedBox(height: 16),
-                // Sarana field
+                // Daerah field
                 TextFormField(
-                  controller: _saranaController,
+                  controller: _daerahController,
                   decoration: InputDecoration(
                     labelText: 'Daerah yang menggunakan',
                     border: OutlineInputBorder(

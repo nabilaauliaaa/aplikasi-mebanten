@@ -14,8 +14,8 @@ class BantenService {
   // Create a new banten
   Future<DocumentReference> createBanten({
     required String namaBanten,
-    required String sarana,
-    required String deskripsi,
+    required String daerah,
+    required String description,
     String? guddenKeyword,
     required List<XFile> images,
   }) async {
@@ -36,8 +36,8 @@ class BantenService {
     return await _firestore.collection('bantens').add({
       'userId': currentUser.uid,
       'namaBanten': namaBanten,
-      'sarana': sarana,
-      'deskripsi': deskripsi,
+      'daerah': daerah,
+      'description': description,
       'guddenKeyword': guddenKeyword ?? '',
       'photos': imageUrls,
       'createdAt': FieldValue.serverTimestamp(),
@@ -74,8 +74,8 @@ class BantenService {
   Future<void> updateBanten({
     required String bantenId,
     required String namaBanten,
-    required String sarana,
-    required String deskripsi,
+    required String daerah,
+    required String description,
     String? guddenKeyword,
     List<XFile>? newImages,
     List<String>? existingImageUrls,
@@ -108,8 +108,8 @@ class BantenService {
     // Update banten document
     await _firestore.collection('bantens').doc(bantenId).update({
       'namaBanten': namaBanten,
-      'sarana': sarana,
-      'deskripsi': deskripsi,
+      'daerah': daerah,
+      'description': description,
       'guddenKeyword': guddenKeyword ?? '',
       'photos': updatedImageUrls,
       'updatedAt': FieldValue.serverTimestamp(),
