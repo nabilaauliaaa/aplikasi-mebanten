@@ -4,7 +4,7 @@ import 'services/firebase_service.dart';
 import 'screens/splash_screen.dart';
 
 void main() async {
-  // Pastikan Flutter engine diinisialisasi
+ 
   WidgetsFlutterBinding.ensureInitialized();
   
   // Inisialisasi Firebase

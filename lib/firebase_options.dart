@@ -2,7 +2,7 @@ import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
-/// Default [FirebaseOptions] untuk digunakan dengan aplikasi Anda.
+/// Default [FirebaseOptions] 
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
@@ -37,9 +37,8 @@ class DefaultFirebaseOptions {
     appId: '1:828382308592:android:1d2cf25e91ce54598a7a35',
     messagingSenderId: '828382308592',
     projectId: 'flutter-1f100',
-    authDomain: 'YOUR_AUTH_DOMAIN',
-    storageBucket: 'flutter-1f100.firebasestorage.app',
-    measurementId: 'YOUR_MEASUREMENT_ID',
+    authDomain: 'flutter-1f100.firebaseapp.com',
+    storageBucket: 'flutter-1f100.firebasestorage.app'
   );
 
   static const FirebaseOptions android = FirebaseOptions(
@@ -47,7 +46,7 @@ class DefaultFirebaseOptions {
     appId: '1:828382308592:android:1d2cf25e91ce54598a7a35',
     messagingSenderId: '828382308592',
     projectId: 'flutter-1f100',
-    storageBucket: 'flutter-1f100.firebasestorage.app',
+    storageBucket: 'flutter-1f100.firebasestorage.app'
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
@@ -55,8 +54,6 @@ class DefaultFirebaseOptions {
     appId: '1:828382308592:android:1d2cf25e91ce54598a7a35',
     messagingSenderId: '828382308592',
     projectId: 'flutter-1f100',
-    storageBucket: 'flutter-1f100.firebasestorage.app',
-    iosClientId: 'YOUR_IOS_CLIENT_ID',
-    iosBundleId: 'YOUR_IOS_BUNDLE_ID',
+    storageBucket: 'flutter-1f100.firebasestorage.app'
   );
 }

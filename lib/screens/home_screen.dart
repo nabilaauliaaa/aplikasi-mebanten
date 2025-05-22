@@ -1,4 +1,3 @@
-// lib/screens/home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -6,7 +5,8 @@ import '../models/banten_model.dart';
 import '../services/banten_service.dart';
 import '../services/auth_service.dart';
 import 'banten_detail_screen.dart';
-import 'package:apk_mebanten/tambahbanten.dart'; // Sesuaikan dengan nama file yang benar
+import 'package:apk_mebanten/tambahbanten.dart';
+import 'profile_page.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,215 +18,500 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final BantenService _bantenService = BantenService();
   final AuthService _authService = AuthService();
+  final TextEditingController _searchController = TextEditingController();
+  
+  List<BantenModel> _allBantens = [];
+  List<BantenModel> _filteredBantens = [];
+  String _searchQuery = '';
+  
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    setState(() {
+      _searchQuery = _searchController.text.toLowerCase();
+      _filterBantens();
+    });
+  }
+
+  void _filterBantens() {
+    if (_searchQuery.isEmpty) {
+      _filteredBantens = List.from(_allBantens);
+    } else {
+      _filteredBantens = _allBantens.where((banten) {
+        return banten.namaBanten.toLowerCase().contains(_searchQuery) ||
+               banten.description.toLowerCase().contains(_searchQuery) ||
+               banten.daerah.toLowerCase().contains(_searchQuery) ||
+               banten.sejarah.toLowerCase().contains(_searchQuery);
+      }).toList();
+    }
+  }
+
+  void _updateBantensList(List<DocumentSnapshot> docs) {
+    _allBantens = docs.map((doc) {
+      final data = doc.data() as Map<String, dynamic>;
+      return BantenModel.fromJson(doc.id, data);
+    }).toList();
+    _filterBantens();
+  }
   
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Explore Banten',
-          style: GoogleFonts.inter(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        centerTitle: true,
-        backgroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await _authService.signOut();
-              // Navigate to login screen or show dialog
-            },
-          ),
-        ],
-      ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: _bantenService.getAllBantens(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          
-          if (snapshot.hasError) {
-            return Center(
-              child: Text(
-                'Error: ${snapshot.error}',
-                style: GoogleFonts.inter(color: Colors.red),
+      backgroundColor: const Color(0xFFF8F9FA),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Modern Header with search
+            Container(
+              color: Colors.white,
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Title
+                  Text(
+                    'explore',
+                    style: GoogleFonts.inter(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // Modern Search Bar
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF5F5F5),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        hintText: 'Search banten...',
+                        hintStyle: GoogleFonts.inter(
+                          color: Colors.grey[500],
+                          fontSize: 16,
+                          fontWeight: FontWeight.w400,
+                        ),
+                        prefixIcon: Icon(
+                          Icons.search,
+                          color: Colors.grey[500],
+                          size: 22,
+                        ),
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? IconButton(
+                                icon: Icon(
+                                  Icons.clear,
+                                  color: Colors.grey[500],
+                                  size: 20,
+                                ),
+                                onPressed: () {
+                                  _searchController.clear();
+                                },
+                              )
+                            : null,
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 16,
+                        ),
+                      ),
+                      style: GoogleFonts.inter(fontSize: 16),
+                    ),
+                  ),
+                ],
               ),
-            );
-          }
-          
-          // Cek apakah ada data
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return Center(
-              child: Text(
-                'Belum ada banten yang ditambahkan',
-                style: GoogleFonts.inter(fontSize: 16),
-              ),
-            );
-          }
-          
-          // Konversi QuerySnapshot ke List<BantenModel>
-          final List<BantenModel> bantens = snapshot.data!.docs.map((doc) {
-            final data = doc.data() as Map<String, dynamic>;
-            return BantenModel.fromJson(doc.id, data);
-          }).toList();
-          
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: bantens.length,
-            itemBuilder: (context, index) {
-              final banten = bantens[index];
-              
-              return Card(
-                margin: const EdgeInsets.only(bottom: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 2,
-                child: InkWell(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => BantenDetailScreen(bantenId: banten.id!),
+            ),
+            
+            // Main Content
+            Expanded(
+              child: StreamBuilder<QuerySnapshot>(
+                stream: _bantenService.getAllBantens(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF4CAF50),
+                        strokeWidth: 2,
                       ),
                     );
-                  },
-                  borderRadius: BorderRadius.circular(12),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // FIXED: Tampilkan gambar jika ada (sesuai dengan photos array dari tambahbanten)
-                        if (banten.photos.isNotEmpty)
-                          Container(
-                            height: 200,
-                            width: double.infinity,
-                            margin: const EdgeInsets.only(bottom: 12),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8),
+                  }
+                  
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.error_outline,
+                            size: 64,
+                            color: Colors.grey[400],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Something went wrong',
+                            style: GoogleFonts.inter(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey[600],
                             ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.network(
-                                banten.photos.first,
-                                fit: BoxFit.cover,
-                                loadingBuilder: (context, child, loadingProgress) {
-                                  if (loadingProgress == null) return child;
-                                  return const Center(
-                                    child: CircularProgressIndicator(),
-                                  );
-                                },
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(
-                                    color: Colors.grey[200],
-                                    child: const Center(
-                                      child: Icon(
-                                        Icons.broken_image,
-                                        color: Colors.grey,
-                                        size: 50,
-                                      ),
-                                    ),
-                                  );
-                                },
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () {
+                              setState(() {});
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF4CAF50),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: Text(
+                              'Try Again',
+                              style: GoogleFonts.inter(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
-                        
-                        // FIXED: Menggunakan field namaBanten (konsisten dengan BantenModel)
-                        Text(
-                          banten.namaBanten,
-                          style: GoogleFonts.inter(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        
-                        // FIXED: Menggunakan field description (konsisten dengan BantenModel)
-                        Text(
-                          banten.description,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            color: Colors.grey[700],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        
-                        // ADDED: Informasi daerah (daerah field)
-                        if (banten.daerah.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 4),
-                            child: Row(
-                              children: [
-                                Icon(Icons.location_on, 
-                                     size: 16, 
-                                     color: Colors.grey[600]),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(
-                                    banten.daerah,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12,
-                                      color: Colors.grey[600],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        
-                        // User info
-                        Text(
-                          'Dibuat oleh: ${banten.userName}',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        
-                        // ADDED: Timestamp display
-                        Text(
-                          'Ditambahkan: ${_formatDate(banten.createdAt)}',
-                          style: GoogleFonts.inter(
-                            fontSize: 10,
-                            color: Colors.grey[500],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          );
-        },
+                        ],
+                      ),
+                    );
+                  }
+                  
+                  // Update bantens list when data changes
+                  if (snapshot.hasData) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _updateBantensList(snapshot.data!.docs);
+                    });
+                  }
+                  
+                  // Empty state with modern design
+                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                    return _buildEmptyState();
+                  }
+                  
+                  // Search results or main grid
+                  List<BantenModel> displayBantens = _searchQuery.isNotEmpty 
+                      ? _filteredBantens 
+                      : _allBantens;
+                  
+                  if (displayBantens.isEmpty && _searchQuery.isNotEmpty) {
+                    return _buildNoSearchResults();
+                  }
+                  
+                  // Modern Grid Layout
+                  return _buildModernGrid(displayBantens);
+                },
+              ),
+            ),
+          ],
+        ),
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xFF3FAE82),
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const TambahBantenPage()),
-          );
-        },
-        child: const Icon(Icons.add, color: Colors.white),
+      // Consistent Bottom Navigation
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: BottomNavigationBar(
+          type: BottomNavigationBarType.fixed,
+          currentIndex: 0, // Explore tab active
+          selectedItemColor: const Color.fromARGB(255, 131, 204, 134),
+          unselectedItemColor: Colors.grey[400],
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          selectedLabelStyle: GoogleFonts.inter(
+            fontWeight: FontWeight.w600,
+            fontSize: 12,
+          ),
+          unselectedLabelStyle: GoogleFonts.inter(
+            fontWeight: FontWeight.w500,
+            fontSize: 12,
+          ),
+          onTap: (index) {
+            switch (index) {
+              case 0:
+                // Already on Explore - do nothing
+                break;
+              case 1:
+                // Navigate to Add Banten
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const TambahBantenPage()),
+                );
+                break;
+              case 2:
+                // Navigate to Profile
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ProfilePage()),
+                );
+                break;
+            }
+          },
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.explore_outlined, size: 24),
+              activeIcon: Icon(Icons.explore, size: 24),
+              label: 'Explore',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.add, size: 24),
+              label: 'Add',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline, size: 24),
+              label: 'Profile',
+            ),
+          ],
+        ),
       ),
     );
   }
-  
-  // ADDED: Helper method untuk format tanggal
-  String _formatDate(DateTime dateTime) {
-    final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-    ];
-    
-    return '${dateTime.day} ${months[dateTime.month - 1]} ${dateTime.year}';
+
+  // Modern Grid Builder
+  Widget _buildModernGrid(List<BantenModel> bantens) {
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: GridView.builder(
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          childAspectRatio: 0.75, // Adjusted for better proportions
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 16,
+        ),
+        itemCount: bantens.length,
+        itemBuilder: (context, index) {
+          final banten = bantens[index];
+          return _buildModernBantenCard(banten);
+        },
+      ),
+    );
+  }
+
+  // Modern Banten Card
+  Widget _buildModernBantenCard(BantenModel banten) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => BantenDetailScreen(bantenId: banten.id!),
+          ),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Image Container
+            Expanded(
+              flex: 4,
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8F4FD),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                ),
+                child: banten.photos.isNotEmpty
+                    ? ClipRRect(
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(20),
+                          topRight: Radius.circular(20),
+                        ),
+                        child: Image.network(
+                          banten.photos.first,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return _buildImagePlaceholder();
+                          },
+                        ),
+                      )
+                    : _buildImagePlaceholder(),
+              ),
+            ),
+            // Title Container - Fixed height to prevent overflow
+            Container(
+              height: 70,
+              padding: const EdgeInsets.all(12),
+              child: Center(
+                child: Text(
+                  banten.namaBanten,
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                    height: 1.3,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Image Placeholder
+  Widget _buildImagePlaceholder() {
+    return Center(
+      child: Icon(
+        Icons.image_outlined,
+        size: 40,
+        color: Colors.blue[300],
+      ),
+    );
+  }
+
+  // Empty State
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE8F4FD),
+                borderRadius: BorderRadius.circular(60),
+              ),
+              child: Icon(
+                Icons.temple_hindu_outlined,
+                size: 60,
+                color: Colors.blue[300],
+              ),
+            ),
+            const SizedBox(height: 32),
+            Text(
+              'No banten yet',
+              style: GoogleFonts.inter(
+                fontSize: 24,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Start by adding your first banten to share with the community',
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                color: Colors.grey[600],
+                height: 1.4,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 40),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const TambahBantenPage()),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF4CAF50),
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              child: Text(
+                'Add First Banten',
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // No Search Results
+  Widget _buildNoSearchResults() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(50),
+              ),
+              child: Icon(
+                Icons.search_off,
+                size: 50,
+                color: Colors.grey[400],
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'No results found',
+              style: GoogleFonts.inter(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Try searching with different keywords',
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

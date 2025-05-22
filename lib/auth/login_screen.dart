@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import './register_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../screens/welcome_screen.dart'; // Adjust import path as needed
+import 'package:apk_mebanten/screens/home_screen.dart'; 
 
 class LoginScreen extends StatefulWidget {
   final String? message;
@@ -33,6 +33,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void initState() {
     super.initState();
     // Tampilkan message jika ada
+
     if (widget.message != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -76,13 +77,13 @@ class _LoginScreenState extends State<LoginScreen> {
         }
         
         // 4. Navigate sesuai parameter atau ke home
-        if (widget.routeAfterLogin == 'add_banten') {
+        if (widget.routeAfterLogin == 'home_screen') {
           // Jika ditentukan untuk pergi ke add_banten
-          Navigator.of(context).pushNamedAndRemoveUntil('/add_banten', (route) => false);
+          Navigator.of(context).pushNamedAndRemoveUntil('/home_screen', (route) => false);
         } else {
-          // Default navigasi ke Welcome Screen
+          // Default navigasi ke Home Screen
           Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => const WelcomeScreen()),
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
             (route) => false,
           );
         }

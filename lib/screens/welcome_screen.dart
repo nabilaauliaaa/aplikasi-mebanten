@@ -75,7 +75,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               child: ElevatedButton(
                 onPressed: _nextPage, // Adjusted for two pages
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Color.fromRGBO(83, 180, 147, 1),
+                  backgroundColor: Color(0xFF86C0AC),
                   padding: EdgeInsets.symmetric(horizontal: 155, vertical: 14),
                   textStyle: GoogleFonts.inter(fontSize: 18),
                 ),

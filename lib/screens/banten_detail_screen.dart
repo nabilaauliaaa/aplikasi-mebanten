@@ -253,7 +253,7 @@ class _BantenDetailScreenState extends State<BantenDetailScreen> {
                   children: [
                     Expanded(
                       child: Text(
-                        banten.namaBanten, // FIXED: Konsisten dengan BantenModel
+                                                  banten.namaBanten, // FIXED: Konsisten dengan Firebase 'name' field
                         style: GoogleFonts.inter(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -344,10 +344,10 @@ class _BantenDetailScreenState extends State<BantenDetailScreen> {
                 ),
                 const SizedBox(height: 24),
                 
-                // description
+                // Deskripsi
                 _buildSection(
-                  title: 'description',
-                  content: banten.description, // FIXED: Konsisten dengan BantenModel
+                  title: 'Deskripsi',
+                                      content: banten.description, // FIXED: Konsisten dengan Firebase 'description' field
                   icon: Icons.description,
                 ),
                 const SizedBox(height: 20),

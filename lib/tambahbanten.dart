@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../auth/login_screen.dart';
+import './screens/profile_page.dart';
+import './screens/home_screen.dart';
 import 'dart:io';
 
 class TambahBantenPage extends StatefulWidget {
@@ -16,7 +20,7 @@ class TambahBantenPage extends StatefulWidget {
 class _TambahBantenPageState extends State<TambahBantenPage> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _namaBantenController = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController(); // ADDED: Missing controller
+  final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _sejarahController = TextEditingController();
   final TextEditingController _daerahController = TextEditingController();
   final TextEditingController _sumberReferensiController = TextEditingController();
@@ -55,7 +59,7 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
   @override
   void dispose() {
     _namaBantenController.dispose();
-    _descriptionController.dispose(); // ADDED: Missing dispose
+    _descriptionController.dispose();
     _sejarahController.dispose();
     _daerahController.dispose();
     _sumberReferensiController.dispose();
@@ -63,14 +67,47 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
     super.dispose();
   }
   
+  // Function to launch URL for reference
+  Future<void> _launchURL(String url) async {
+    String finalUrl = url.trim();
+    if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
+      finalUrl = 'https://$finalUrl';
+    }
+    
+    try {
+      final Uri uri = Uri.parse(finalUrl);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Tidak dapat membuka URL')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error membuka URL: $e')),
+        );
+      }
+    }
+  }
+  
   // Function to pick image
   Future<void> _pickImage() async {
     try {
-      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 80,
+      );
       if (image != null) {
         setState(() {
           _selectedImage = File(image.path);
           _previewImageUrl = null;
+          _imageLinkController.clear(); // Clear image link when file selected
         });
       }
     } catch (e) {
@@ -86,7 +123,7 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
     if (url.isNotEmpty) {
       setState(() {
         _previewImageUrl = url;
-        _selectedImage = null;
+        _selectedImage = null; // Clear file when link is used
       });
     } else {
       setState(() {
@@ -161,13 +198,13 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
         photos.add(imageUrl);
       }
       
-      // 4. Save data to Firestore - FIXED: Field mapping sesuai Firebase dan BantenModel
+      // 4. Save data to Firestore
       await _firestore.collection('bantens').add({
         'userId': currentUser.uid,
-        'namaBanten': _namaBantenController.text.trim(), // Konsisten dengan BantenModel
-        'description': _descriptionController.text.trim(),    // FIXED: Menggunakan _descriptionController
-        'sejarah': _sejarahController.text.trim(),        // FIXED: Field sejarah terpisah
-        'daerah': _daerahController.text.trim(),          // Field daerah -> daerah
+        'namaBanten': _namaBantenController.text.trim(),          
+        'description': _descriptionController.text.trim(),  
+        'sejarah': _sejarahController.text.trim(),          
+        'daerah': _daerahController.text.trim(),             
         'guddenKeyword': _sumberReferensiController.text.trim(),
         'photos': photos,
         'createdAt': FieldValue.serverTimestamp(),
@@ -178,7 +215,10 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
       });
       
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Banten berhasil disimpan')),
+        const SnackBar(
+          content: Text('Banten berhasil disimpan'),
+          backgroundColor: Color(0xFF4CAF50),
+        ),
       );
       
       Navigator.of(context).pop();
@@ -198,7 +238,9 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
     if (_auth.currentUser == null) {
       return const Scaffold(
         body: Center(
-          child: CircularProgressIndicator(),
+          child: CircularProgressIndicator(
+            color: Color(0xFF4CAF50),
+          ),
         ),
       );
     }
@@ -206,11 +248,12 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text(
-          "Add Banten",
-          style: TextStyle(
+        title: Text(
+          "add banten",
+          style: GoogleFonts.inter(
             color: Colors.black,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w600,
+            fontSize: 28,
           ),
         ),
         centerTitle: true,
@@ -241,14 +284,14 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
               ),
               const SizedBox(height: 16),
               
-              // ADDED: description Field (sesuai UI Figma)
+              // Description Field
               _buildTextField(
                 controller: _descriptionController,
-                hintText: 'description',
+                hintText: 'Deskripsi',
                 maxLines: 3,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Mohon isi description';
+                    return 'Mohon isi deskripsi';
                   }
                   return null;
                 },
@@ -282,18 +325,53 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
               ),
               const SizedBox(height: 16),
               
-              // Sumber Referensi Field
-              _buildTextField(
-                controller: _sumberReferensiController,
-                hintText: 'Sumber Referensi',
+              // ENHANCED: Sumber Referensi Field with URL launcher
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildTextField(
+                    controller: _sumberReferensiController,
+                    hintText: 'Sumber Referensi (URL)',
+                    keyboardType: TextInputType.url,
+                    onChanged: (value) {
+                      setState(() {}); // Trigger rebuild to show/hide URL button
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  if (_sumberReferensiController.text.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 16),
+                      child: GestureDetector(
+                        onTap: () => _launchURL(_sumberReferensiController.text),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.open_in_new,
+                              size: 16,
+                              color: Colors.blue[600],
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Klik untuk buka URL',
+                              style: TextStyle(
+                                color: Colors.blue[600],
+                                fontSize: 12,
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
               ),
               const SizedBox(height: 16),
               
-              // Image picker area
+              // ENHANCED: Image picker area
               GestureDetector(
                 onTap: _pickImage,
                 child: Container(
-                  height: 150,
+                  height: 200, // Increased height
                   width: double.infinity,
                   decoration: BoxDecoration(
                     color: const Color(0xFFE3F2FD),
@@ -301,45 +379,120 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
                     border: Border.all(color: Colors.grey.shade300),
                   ),
                   child: _selectedImage != null
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.file(
-                            _selectedImage!,
-                            fit: BoxFit.cover,
-                          ),
+                      ? Stack(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.file(
+                                _selectedImage!,
+                                width: double.infinity,
+                                height: 200,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _selectedImage = null;
+                                  });
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black54,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Icon(
+                                    Icons.close,
+                                    color: Colors.white,
+                                    size: 16,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         )
                       : _previewImageUrl != null
-                          ? ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: Image.network(
-                                _previewImageUrl!,
-                                fit: BoxFit.cover,
-                                loadingBuilder: (context, child, loadingProgress) {
-                                  if (loadingProgress == null) return child;
-                                  return const Center(
-                                    child: CircularProgressIndicator(),
-                                  );
-                                },
-                                errorBuilder: (context, error, stackTrace) {
-                                  return const Center(
-                                    child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(Icons.error, color: Colors.red),
-                                        SizedBox(height: 8),
-                                        Text('Gagal memuat gambar', 
-                                            style: TextStyle(color: Colors.red)),
-                                      ],
+                          ? Stack(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Image.network(
+                                    _previewImageUrl!,
+                                    width: double.infinity,
+                                    height: 200,
+                                    fit: BoxFit.cover,
+                                    loadingBuilder: (context, child, loadingProgress) {
+                                      if (loadingProgress == null) return child;
+                                      return const Center(
+                                        child: CircularProgressIndicator(
+                                          color: Color(0xFF4CAF50),
+                                        ),
+                                      );
+                                    },
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return const Center(
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(Icons.error, color: Colors.red),
+                                            SizedBox(height: 8),
+                                            Text('Gagal memuat gambar', 
+                                                style: TextStyle(color: Colors.red)),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                                Positioned(
+                                  top: 8,
+                                  right: 8,
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        _previewImageUrl = null;
+                                        _imageLinkController.clear();
+                                      });
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black54,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: const Icon(
+                                        Icons.close,
+                                        color: Colors.white,
+                                        size: 16,
+                                      ),
                                     ),
-                                  );
-                                },
-                              ),
+                                  ),
+                                ),
+                              ],
                             )
                           : const Center(
-                              child: Icon(
-                                Icons.image_outlined,
-                                size: 50,
-                                color: Color(0xFF64B5F6),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.image_outlined,
+                                    size: 50,
+                                    color: Color(0xFF64B5F6),
+                                  ),
+                                  SizedBox(height: 8),
+                                  Text(
+                                    'Tap untuk pilih gambar',
+                                    style: TextStyle(
+                                      color: Color(0xFF64B5F6),
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                 ),
@@ -349,10 +502,15 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
               // Paste the image link Field
               _buildTextField(
                 controller: _imageLinkController,
-                hintText: 'Paste the image link',
+                hintText: 'Paste the image link (opsional)',
+                keyboardType: TextInputType.url,
                 onChanged: (value) {
                   if (value.isNotEmpty) {
                     _previewLinkImage();
+                  } else {
+                    setState(() {
+                      _previewImageUrl = null;
+                    });
                   }
                 },
               ),
@@ -366,7 +524,7 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
                   child: ElevatedButton(
                     onPressed: _isUploading ? null : _saveBantenData,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF4CAF50),
+                      backgroundColor: const Color(0xFF86C0AC),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(25),
                       ),
@@ -396,48 +554,88 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
           ),
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: 1,
-        selectedItemColor: const Color(0xFF4CAF50),
-        unselectedItemColor: Colors.grey,
-        onTap: (index) {
-          if (index == 0) {
-            Navigator.of(context).popUntil((route) => route.isFirst);
-          } else if (index == 2) {
-            // Navigate to Profile
-          }
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.explore),
-            label: 'Explore',
+      // Consistent BottomNavigationBar
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: BottomNavigationBar(
+          type: BottomNavigationBarType.fixed,
+          currentIndex: 1, // Add tab active
+          selectedItemColor: const Color(0xFF4CAF50),
+          unselectedItemColor: Colors.grey[400],
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          selectedLabelStyle: GoogleFonts.inter(
+            fontWeight: FontWeight.w600,
+            fontSize: 12,
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.add),
-            label: 'Add',
+          unselectedLabelStyle: GoogleFonts.inter(
+            fontWeight: FontWeight.w500,
+            fontSize: 12,
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-        ],
+          onTap: (index) {
+            switch (index) {
+              case 0:
+                // Navigate back to Home/Explore
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const HomeScreen()),
+                );
+                break;
+              case 1:
+                // Already on Add page - do nothing
+                break;
+              case 2:
+                // Navigate to Profile page
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ProfilePage()),
+                );
+                break;
+            }
+          },
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.explore_outlined, size: 24),
+              label: 'Explore',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.add_circle_outline, size: 24),
+              activeIcon: Icon(Icons.add_circle, size: 24),
+              label: 'Add',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline, size: 24),
+              label: 'Profile',
+            ),
+          ],
+        ),
       ),
     );
   }
   
-  // Helper method to build text fields
+  // Enhanced helper method to build text fields
   Widget _buildTextField({
     required TextEditingController controller,
     required String hintText,
     int maxLines = 1,
     String? Function(String?)? validator,
     void Function(String)? onChanged,
+    TextInputType? keyboardType,
   }) {
     return TextFormField(
       controller: controller,
       maxLines: maxLines,
       onChanged: onChanged,
+      keyboardType: keyboardType,
       decoration: InputDecoration(
         hintText: hintText,
         hintStyle: TextStyle(color: Colors.grey[500]),

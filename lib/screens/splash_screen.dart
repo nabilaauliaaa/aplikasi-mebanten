@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:apk_mebanten/screens/welcome_screen.dart';
-import 'package:apk_mebanten/screens/home_screen.dart'; // Sesuaikan dengan nama file home screen Anda
+import 'package:apk_mebanten/screens/home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});

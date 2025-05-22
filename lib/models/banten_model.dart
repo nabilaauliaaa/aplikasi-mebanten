@@ -3,9 +3,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class BantenModel {
   String? id;
-  final String namaBanten;
-  final String description;
-  final String sejarah;        // ADDED: Field sejarah terpisah dari description
+  final String namaBanten;           // FIXED: Sesuai Firebase 'name' field
+  final String description;    // FIXED: Sesuai Firebase 'description' field
+  final String sejarah;        // ADDED: Field sejarah terpisah dari deskripsi
   final String daerah;         // Field untuk daerah yang menggunakan
   final String guddenKeyword;  // Field untuk sumber referensi
   final List<String> photos;
