@@ -77,19 +77,15 @@
 <details>
 <summary><strong>🔍 Search & Filter System</strong></summary>
 
-- **Advanced Search**: Search by name, ingredients, or ceremony type
-- **Smart Filters**: Filter by occasion, complexity, region
-- **Auto-suggestions**: Real-time search suggestions
-- **Search History**: Recent searches for quick access
+- **Advanced Search**: Search by name, ingredients, or ceremony occasion
 
 </details>
 
 <details>
 <summary><strong>📚 Banten Database</strong></summary>
 
-- **Comprehensive Information**: Name, description, history, significance
-- **Visual References**: High-quality images and diagrams
-- **Step-by-step Guides**: Detailed preparation instructions
+- **Comprehensive Information**: Name, description, history, references
+- **Visual References**: High-quality images
 - **Cultural Context**: Historical background and spiritual meaning
 
 </details>
@@ -99,27 +95,9 @@
 
 - **Intuitive Navigation**: Easy-to-use interface design
 - **Offline Functionality**: Core features work without internet
-- **Modern Design**: Save favorite banten for quick access
+- **Modern Design**: Build with modern design 
 
 </details>
-
----
-
-<h2 align="center">📊 Project Statistics</h2>
-
-<div align="center">
-
-![GitHub Stats](https://github-readme-stats.vercel.app/api?username=nabilaauliaaa&repo=aplikasi-mebanten&show_icons=true&theme=radical&hide_border=true)
-
-![Language Stats](https://github-readme-stats.vercel.app/api/top-langs/?username=nabilaauliaaa&layout=compact&theme=radical&hide_border=true)
-
-</div>
-
-<p align="center">
-  <img src="https://img.shields.io/github/contributors/nabilaauliaaa/aplikasi-mebanten?style=for-the-badge" alt="Contributors" />
-  <img src="https://img.shields.io/github/last-commit/nabilaauliaaa/aplikasi-mebanten?style=for-the-badge" alt="Last Commit" />
-  <img src="https://img.shields.io/github/commit-activity/m/nabilaauliaaa/aplikasi-mebanten?style=for-the-badge" alt="Commit Activity" />
-</p>
 
 ---
 
