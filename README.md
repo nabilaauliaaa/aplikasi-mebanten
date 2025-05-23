@@ -36,8 +36,8 @@
 | 🔍 **Search & Discovery** | 📚 **Educational Content** | 🏛️ **Cultural Preservation** |
 |:------------------------:|:---------------------------:|:-----------------------------:|
 | Advanced search functionality | Detailed banten descriptions | Digital archiving system |
-| Category-based filtering | Historical background | Cultural heritage documentation |
-| Quick access to information | Reference materials |
+| Search bar filtering | Historical background | Cultural heritage documentation |
+| Quick access to information | Reference materials | Detailed informations |
 
 </div>
 
@@ -46,20 +46,7 @@
   📖 <strong>Rich Content</strong> - Names, descriptions, history, and cultural significance<br>
   🎨 <strong>Visual Guide</strong> - Images and visual references for each banten<br>
   🔗 <strong>Cross-References</strong> - Related ceremonies and occasions<br>
-  📱 <strong>Offline Access</strong> - Available without internet connection<br>
-  🌍 <strong>Multi-Language</strong> - Indonesian and Balinese language support
 </p>
-
----
-
-<h2 align="center">📱 Screenshots</h2>
-
-<div align="center">
-  <img src="screenshots/home_screen.png" width="200" alt="Home Screen" />
-  <img src="screenshots/search_screen.png" width="200" alt="Search Screen" />
-  <img src="screenshots/detail_screen.png" width="200" alt="Detail Screen" />
-  <img src="screenshots/category_screen.png" width="200" alt="Category Screen" />
-</div>
 
 ---
 
@@ -77,64 +64,11 @@
 
 | **Frontend** | **Backend** | **Database** | **Tools** |
 |:------------:|:-----------:|:------------:|:---------:|
-| Flutter 3.0+ | Firebase Functions | Cloud Firestore | Android Studio |
-| Dart 2.17+ | Firebase Auth | Firebase Storage | VS Code |
-| Material Design | Firebase Analytics | Git & GitHub |
+| Flutter  | Firebase Functions | Cloud Firestore | Android Studio |
+| Dart | Firebase Auth | Firebase Storage | VS Code |
+| Material Design | Firebase Analytics | Git & GitHub | Figma |
 
 </div>
-
----
-
-<h2 align="center">🚀 Getting Started</h2>
-
-### Prerequisites
-```bash
-✅ Flutter SDK 3.0.0 or higher
-✅ Dart SDK 2.17.0 or higher  
-✅ Android Studio / VS Code
-✅ Firebase Account
-✅ Git
-```
-
-### Installation
-
-<details>
-<summary><strong>📋 Step-by-step Installation Guide</strong></summary>
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/mebanten.git
-   cd mebanten
-   ```
-
-2. **Install dependencies**
-   ```bash
-   flutter pub get
-   ```
-
-3. **Setup Firebase**
-   ```bash
-   # Download google-services.json from Firebase Console
-   # Place it in: android/app/google-services.json
-   
-   # For iOS (if applicable):
-   # Download GoogleService-Info.plist
-   # Place it in: ios/Runner/GoogleService-Info.plist
-   ```
-
-4. **Configure environment variables**
-   ```bash
-   cp .env.example .env
-   # Edit .env file with your Firebase configuration
-   ```
-
-5. **Run the application**
-   ```bash
-   flutter run
-   ```
-
-</details>
-
 
 ---
 
@@ -158,22 +92,13 @@
 
 ---
 
-<h2 align="center">🔥 Core Features Deep Dive</h2>
-
-<details>
-<summary><strong>🔍 Search & Filter System</strong></summary>
-
-- **Advanced Search**: Search by name or ceremony occasional
-- **Auto-suggestions**: Real-time search suggestions
-- **Search History**: Recent searches for quick access
-
 </details>
 
 <details>
 <summary><strong>📚 Banten Database</strong></summary>
 
-- **Comprehensive Information**: Name, description, history, significance
-- **Visual References**: High-quality images and diagrams
+- **Detailed Information**: Name, description, history, Region, reference
+- **Visual References**: High-quality images
 - **Cultural Context**: Historical background and spiritual meaning
 
 </details>
@@ -191,8 +116,6 @@
 
 <h2 align="center">📊 Project Statistics</h2>
 
-<div align="center">
-
 ![GitHub Stats](https://github-readme-stats.vercel.app/api?username=nabilaauliaaa&repo=aplikasi-mebanten&show_icons=true&theme=radical&hide_border=true)
 
 ![Language Stats](https://github-readme-stats.vercel.app/api/top-langs/?nabilaauliaaa=aplikasi-mebanten&layout=compact&theme=radical&hide_border=true)
@@ -208,22 +131,6 @@
 ---
 
 <h2 align="center">🏆 Contributors</h2>
-
-<div align="center">
-
-### 🌟 Core Team
-
-| Developer | Role | Contributions |
-|-----------|------|---------------|
-| [@yourusername](https://github.com/yourusername) | Lead Developer | 🚀 App Architecture, UI/UX |
-| [@contributor1](https://github.com/contributor1) | Cultural Consultant | 📚 Content Verification |
-| [@contributor2](https://github.com/contributor2) | Backend Developer | 🔥 Firebase Integration |
-
-<a href="https://github.com/nabilaauliaaa/mebanten/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=yourusername/mebanten" />
-</a>
-
-</div>
 
 
 
