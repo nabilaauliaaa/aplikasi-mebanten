@@ -66,7 +66,7 @@
 |:------------:|:-----------:|:------------:|:---------:|
 | Flutter | Firebase Functions | Cloud Firestore | Android Studio |
 | Dart  | Firebase Auth | Firebase Storage | VS Code |
-| Figma | Firebase Analytics | Local SQLite | Git & GitHub |
+| Figma | Firebase Analytics | Firebase | Git & GitHub |
 
 </div>
 
