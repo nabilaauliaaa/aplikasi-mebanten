@@ -77,14 +77,14 @@
 <details>
 <summary><strong>🔍 Search & Filter System</strong></summary>
 
-- **Advanced Search**: Search by name, ingredients, or ceremony occasion
+- **Advanced Search**: Search by name, description, history, or ceremony occasion
 
 </details>
 
 <details>
 <summary><strong>📚 Banten Database</strong></summary>
 
-- **Comprehensive Information**: Name, description, history, references
+- **Comprehensive Information**: Name, description, history, references, and regional based
 - **Visual References**: High-quality images
 - **Cultural Context**: Historical background and spiritual meaning
 
