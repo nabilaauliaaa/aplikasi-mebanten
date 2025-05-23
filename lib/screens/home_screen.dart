@@ -52,17 +52,16 @@ class _HomeScreenState extends State<HomeScreen> {
         return banten.namaBanten.toLowerCase().contains(_searchQuery) ||
                banten.description.toLowerCase().contains(_searchQuery) ||
                banten.daerah.toLowerCase().contains(_searchQuery) ||
-               banten.sejarah.toLowerCase().contains(_searchQuery);
+               banten.guddenKeyword.toLowerCase().contains(_searchQuery);
       }).toList();
     }
   }
 
-  void _updateBantensList(List<DocumentSnapshot> docs) {
-    _allBantens = docs.map((doc) {
-      final data = doc.data() as Map<String, dynamic>;
-      return BantenModel.fromJson(doc.id, data);
-    }).toList();
-    _filterBantens();
+  void _updateBantensList(List<BantenModel> bantens) {
+    setState(() {
+      _allBantens = bantens;
+      _filterBantens();
+    });
   }
   
   @override
@@ -77,13 +76,13 @@ class _HomeScreenState extends State<HomeScreen> {
               color: Colors.white,
               padding: const EdgeInsets.all(20.0),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   // Title
                   Text(
-                    'explore',
+                    'Temukan Banten di sini!',
                     style: GoogleFonts.inter(
-                      fontSize: 28,
+                      fontSize: 18,
                       fontWeight: FontWeight.w600,
                       color: Colors.black87,
                     ),
@@ -98,7 +97,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: TextField(
                       controller: _searchController,
                       decoration: InputDecoration(
-                        hintText: 'Search banten...',
+                        hintText: 'Temukan banten...',
                         hintStyle: GoogleFonts.inter(
                           color: Colors.grey[500],
                           fontSize: 16,
@@ -136,7 +135,7 @@ class _HomeScreenState extends State<HomeScreen> {
             
             // Main Content
             Expanded(
-              child: StreamBuilder<QuerySnapshot>(
+              child: StreamBuilder<List<BantenModel>>(
                 stream: _bantenService.getAllBantens(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
@@ -167,6 +166,14 @@ class _HomeScreenState extends State<HomeScreen> {
                               color: Colors.grey[600],
                             ),
                           ),
+                          Text(
+                            'Error: ${snapshot.error}',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              color: Colors.red[600],
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
                           const SizedBox(height: 16),
                           ElevatedButton(
                             onPressed: () {
@@ -192,22 +199,25 @@ class _HomeScreenState extends State<HomeScreen> {
                     );
                   }
                   
-                  // Update bantens list when data changes
-                  if (snapshot.hasData) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      _updateBantensList(snapshot.data!.docs);
-                    });
-                  }
-                  
                   // Empty state with modern design
-                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
                     return _buildEmptyState();
                   }
                   
-                  // Search results or main grid
+                  // Update internal list only when needed for search
+                  final currentData = snapshot.data!;
+                  if (_searchQuery.isNotEmpty) {
+                    // Only update if data has changed
+                    if (_allBantens.length != currentData.length) {
+                      _allBantens = currentData;
+                      _filterBantens();
+                    }
+                  }
+
+                  // Show data - use filtered for search, direct data for normal view
                   List<BantenModel> displayBantens = _searchQuery.isNotEmpty 
                       ? _filteredBantens 
-                      : _allBantens;
+                      : currentData;
                   
                   if (displayBantens.isEmpty && _searchQuery.isNotEmpty) {
                     return _buildNoSearchResults();
@@ -221,7 +231,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
-      // Consistent Bottom Navigation
+      // Bottom Navigation Bar
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -296,7 +306,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: GridView.builder(
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          childAspectRatio: 0.75, // Adjusted for better proportions
+          childAspectRatio: 0.75,
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
         ),
@@ -393,7 +403,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildImagePlaceholder() {
     return Center(
       child: Icon(
-        Icons.image_outlined,
+        Icons.temple_hindu_outlined,
         size: 40,
         color: Colors.blue[300],
       ),

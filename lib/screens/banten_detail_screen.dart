@@ -1,4 +1,3 @@
-// lib/screens/banten_detail_screen.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/banten_service.dart';
@@ -305,7 +304,7 @@ class _BantenDetailScreenState extends State<BantenDetailScreen> {
                           ),
                           Expanded(
                             child: Text(
-                              banten.userName,
+                              banten.userName?.isNotEmpty == true ? banten.userName! : 'Tidak diketahui',
                               style: GoogleFonts.inter(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,

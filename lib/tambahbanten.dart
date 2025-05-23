@@ -249,11 +249,11 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         title: Text(
-          "add banten",
+          "Tambah Banten",
           style: GoogleFonts.inter(
             color: Colors.black,
             fontWeight: FontWeight.w600,
-            fontSize: 28,
+            fontSize: 18,
           ),
         ),
         centerTitle: true,
@@ -485,7 +485,7 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
                                   ),
                                   SizedBox(height: 8),
                                   Text(
-                                    'Tap untuk pilih gambar',
+                                    'Ketuk untuk menambahkan gambar',
                                     style: TextStyle(
                                       color: Color(0xFF64B5F6),
                                       fontSize: 14,
@@ -526,7 +526,7 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF86C0AC),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(25),
+                        borderRadius: BorderRadius.circular(5),
                       ),
                       elevation: 0,
                     ),
@@ -608,8 +608,8 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
               label: 'Explore',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.add_circle_outline, size: 24),
-              activeIcon: Icon(Icons.add_circle, size: 24),
+              icon: Icon(Icons.add, size: 24),
+              activeIcon: Icon(Icons.add, size: 24),
               label: 'Add',
             ),
             BottomNavigationBarItem(

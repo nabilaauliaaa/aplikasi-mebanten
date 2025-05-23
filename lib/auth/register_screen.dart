@@ -335,7 +335,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
               
-              // Terms and conditions checkbox
+              // Terms and conditions checkbox - UPDATED WITH STYLED LINKS
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -349,11 +349,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     activeColor: const Color(0xFF3FAE82),
                   ),
                   Expanded(
-                    child: Text(
-                      "I've read and agree with the Terms and Conditions and the Privacy Policy",
-                      style: GoogleFonts.inter(
-                        color: Colors.grey[600],
-                        fontSize: screenHeight * 0.014,
+                    child: RichText(
+                      text: TextSpan(
+                        style: GoogleFonts.inter(
+                          color: Colors.grey[600],
+                          fontSize: screenHeight * 0.014,
+                        ),
+                        children: [
+                          const TextSpan(text: "I have read and agree with the "),
+                          TextSpan(
+                            text: "Terms and Conditions",
+                            style: GoogleFonts.inter(
+                              color: const Color(0xFF3FAE82),
+                              fontSize: screenHeight * 0.014,
+                              decoration: TextDecoration.underline,
+                              decorationColor: const Color(0xFF3FAE82),
+                            ),
+                          ),
+                          const TextSpan(text: " and the "),
+                          TextSpan(
+                            text: "Privacy Policy",
+                            style: GoogleFonts.inter(
+                              color: const Color(0xFF3FAE82),
+                              fontSize: screenHeight * 0.014,
+                              decoration: TextDecoration.underline,
+                              decorationColor: const Color(0xFF3FAE82),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -418,6 +441,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             'Log in here',
                             style: GoogleFonts.inter(
                               color: const Color(0xFF3FAE82),
+                              fontSize: 20,
                               fontWeight: FontWeight.bold,
                             ),
                           ),

@@ -56,14 +56,14 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               // First Onboarding Screen
               _buildOnboardingScreen(
                 image: 'assets/images/background1.png',
-                title: 'Mebanten',
-                subtitle: 'Setiap persembahan adalah doa, setiap pencarian adalah makna.',
+                title: 'Om Swastyastu',
+                subtitle: 'Setiap persembahan adalah doa, setiap pencarian adalah makna',
               ),
               // Second Onboarding Screen
               _buildOnboardingScreen(
                 image: 'assets/images/background1.png',
-                title: 'Om Swastyastu',
-                subtitle: 'Selamat datang di Mebanten, aplikasi yang membantu Anda dalam melakukan persembahan.',
+                title: 'Mebanten',
+                subtitle: 'Selamat datang di Mebanten, rumah digital untuk menjaga warisan budaya Bali',
               ),
             ],
           ),
@@ -73,13 +73,19 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             child: Padding(
               padding: const EdgeInsets.all(24.0),
               child: ElevatedButton(
-                onPressed: _nextPage, // Adjusted for two pages
+                onPressed: _nextPage,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF86C0AC),
+                  backgroundColor: Color(0xFF53B493),
+                  foregroundColor: Colors.white,
                   padding: EdgeInsets.symmetric(horizontal: 155, vertical: 14),
-                  textStyle: GoogleFonts.inter(fontSize: 18),
+                  textStyle: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  
                 ),
                 child: Text(currentPage == 1 ? 'Log In' : 'Next'),
+                
               ),
             ),
           ),

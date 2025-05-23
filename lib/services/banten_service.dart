@@ -4,18 +4,19 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
-import 'firebase_service.dart';
+import '../models/banten_model.dart';
 
 class BantenService {
-  final FirebaseFirestore _firestore = FirebaseService.instance.firestore;
-  final FirebaseStorage _storage = FirebaseService.instance.storage;
-  final FirebaseAuth _auth = FirebaseService.instance.auth;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseStorage _storage = FirebaseStorage.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
   
   // Create a new banten
   Future<DocumentReference> createBanten({
     required String namaBanten,
     required String daerah,
     required String description,
+    String? sejarah,
     String? guddenKeyword,
     required List<XFile> images,
   }) async {
@@ -38,6 +39,7 @@ class BantenService {
       'namaBanten': namaBanten,
       'daerah': daerah,
       'description': description,
+      'sejarah': sejarah ?? '',
       'guddenKeyword': guddenKeyword ?? '',
       'photos': imageUrls,
       'createdAt': FieldValue.serverTimestamp(),
@@ -48,8 +50,21 @@ class BantenService {
     });
   }
   
-  // Get all bantens
-  Stream<QuerySnapshot> getAllBantens() {
+  // Get all bantens - return Stream<List<BantenModel>> for easier use in UI
+  Stream<List<BantenModel>> getAllBantens() {
+    return _firestore
+        .collection('bantens')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+          return snapshot.docs.map((doc) {
+            return BantenModel.fromFirestore(doc.id, doc.data() as Map<String, dynamic>);
+          }).toList();
+        });
+  }
+  
+  // Get all bantens as QuerySnapshot (for compatibility with existing UI)
+  Stream<QuerySnapshot> getAllBantensAsQuerySnapshot() {
     return _firestore
         .collection('bantens')
         .orderBy('createdAt', descending: true)
@@ -70,12 +85,22 @@ class BantenService {
     return _firestore.collection('bantens').doc(bantenId).get();
   }
   
+  // Get banten by ID as BantenModel
+  Future<BantenModel> getBantenModelById(String bantenId) async {
+    DocumentSnapshot doc = await _firestore.collection('bantens').doc(bantenId).get();
+    if (!doc.exists) {
+      throw Exception('Banten not found');
+    }
+    return BantenModel.fromFirestore(doc.id, doc.data() as Map<String, dynamic>);
+  }
+  
   // Update a banten
   Future<void> updateBanten({
     required String bantenId,
     required String namaBanten,
     required String daerah,
     required String description,
+    String? sejarah,
     String? guddenKeyword,
     List<XFile>? newImages,
     List<String>? existingImageUrls,
@@ -110,6 +135,7 @@ class BantenService {
       'namaBanten': namaBanten,
       'daerah': daerah,
       'description': description,
+      'sejarah': sejarah ?? '',
       'guddenKeyword': guddenKeyword ?? '',
       'photos': updatedImageUrls,
       'updatedAt': FieldValue.serverTimestamp(),
@@ -179,5 +205,51 @@ class BantenService {
         .where('guddenKeyword', isEqualTo: category)
         .orderBy('createdAt', descending: true)
         .snapshots();
+  }
+  
+  // Add simple method for basic CRUD (for compatibility with simple UI)
+  Future<DocumentReference> addBanten(String name, String description) async {
+    User? currentUser = _auth.currentUser;
+    if (currentUser == null) {
+      throw Exception('User must be logged in');
+    }
+    
+    return await _firestore.collection('bantens').add({
+      'userId': currentUser.uid,
+      'name': name,
+      'namaBanten': name, 
+      'description': description,
+      'daerah': '',
+      'sejarah': '',
+      'guddenKeyword': '',
+      'photos': <String>[],
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+  
+  // Update simple banten (for compatibility)
+  Future<void> updateBantenSimple(String id, String name, String description) async {
+    User? currentUser = _auth.currentUser;
+    if (currentUser == null) {
+      throw Exception('User must be logged in');
+    }
+    
+    DocumentSnapshot doc = await _firestore.collection('bantens').doc(id).get();
+    if (!doc.exists) {
+      throw Exception('Banten not found');
+    }
+    
+    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    if (data['userId'] != currentUser.uid) {
+      throw Exception('Not authorized to update this banten');
+    }
+    
+    await _firestore.collection('bantens').doc(id).update({
+      'name': name,
+      'namaBanten': name,
+      'description': description,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
   }
 }

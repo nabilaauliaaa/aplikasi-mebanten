@@ -144,8 +144,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Center(
                     child: Image.asset(
                       'assets/images/kedua.png',
-                      height: screenHeight * 0.2,
-                      width: screenWidth * 0.6,
+                      height: screenHeight * 0.4,
+                      width: screenWidth * 1.5,
                       fit: BoxFit.contain,
                     ),
                   ),
@@ -167,13 +167,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.start,
-                      crossAxisAlignment: CrossAxisAlignment.start, // Align kiri
+                      crossAxisAlignment: CrossAxisAlignment.start, 
                       children: [
                         SizedBox(height: screenHeight * 0.02),
                         
-                        // Welcome text - di sisi kiri
+                        // Welcome text
                         Text(
-                          'Welcome!',
+                          'Om Swastyastu!',
                           style: GoogleFonts.inter(
                             fontSize: screenHeight * 0.03,
                             fontWeight: FontWeight.bold,
@@ -322,6 +322,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                       'Register here',
                                       style: GoogleFonts.inter(
                                         color: const Color(0xFF3FAE82),
+                                        fontSize: 20,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),

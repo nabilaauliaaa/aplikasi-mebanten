@@ -171,11 +171,11 @@ class _ProfilePageState extends State<ProfilePage> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         title: Text(
-          'profil',
+          'Profil',
           style: GoogleFonts.inter(
             fontWeight: FontWeight.w600,
             color: Colors.black,
-            fontSize: 28,
+            fontSize: 18,
           ),
         ),
         centerTitle: true,
@@ -200,11 +200,11 @@ class _ProfilePageState extends State<ProfilePage> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         title: Text(
-          'profil',
+          'Profil',
           style: GoogleFonts.inter(
             fontWeight: FontWeight.w600,
             color: Colors.black,
-            fontSize: 28,
+            fontSize: 18,
           ),
         ),
         centerTitle: true,

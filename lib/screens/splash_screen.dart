@@ -17,7 +17,7 @@ class _SplashScreenState extends State<SplashScreen> {
     super.initState();
     // Timer untuk tampilan splash
     Timer(
-      const Duration(seconds: 3),
+      const Duration(seconds: 5),
       () => _checkAuthState(),
     );
   }
@@ -30,7 +30,7 @@ class _SplashScreenState extends State<SplashScreen> {
       // User sudah login, navigasi ke home screen
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(
-          builder: (context) => const HomeScreen(), // Ganti dengan HomeScreen Anda
+          builder: (context) => const HomeScreen(),
         ),
         (route) => false,
       );
@@ -47,12 +47,14 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // UI sama persis dengan kode asli Anda
     return Scaffold(
-      body: Stack(
-        children: [
-          Image.asset('assets/images/background1.png'),
-        ]
+      body: SizedBox(
+        width: double.infinity,
+        height: double.infinity,
+        child: Image.asset(
+          'assets/images/background1.png',
+          fit: BoxFit.cover,
+        ),
       ),
     );
   }

@@ -3,186 +3,113 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class BantenModel {
   String? id;
-  final String namaBanten;           // FIXED: Sesuai Firebase 'name' field
-  final String description;    // FIXED: Sesuai Firebase 'description' field
-  final String sejarah;        // ADDED: Field sejarah terpisah dari deskripsi
-  final String daerah;         // Field untuk daerah yang menggunakan
-  final String guddenKeyword;  // Field untuk sumber referensi
+  final String namaBanten;
+  final String name; // For compatibility
+  final String description;
+  final String daerah;
+  final String sejarah;
+  final String guddenKeyword;
   final List<String> photos;
   final String userId;
-  final String userName;
-  final String? username;
-  final String? userEmail;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String? userName;
+  final String? userEmail;
+  final String? username;
   
   BantenModel({
     this.id,
     required this.namaBanten,
     required this.description,
-    required this.sejarah,      // ADDED: Required sejarah field
-    required this.daerah,
-    this.guddenKeyword = '',
-    required this.photos,
     required this.userId,
-    required this.userName,
-    this.username,
-    this.userEmail,
     required this.createdAt,
-    required this.updatedAt,
-  });
+    this.daerah = '',
+    this.sejarah = '',
+    this.guddenKeyword = '',
+    this.photos = const [],
+    DateTime? updatedAt,
+    this.userName,
+    this.userEmail,
+    this.username,
+  }) : name = namaBanten, // Set name same as namaBanten for compatibility
+       updatedAt = updatedAt ?? createdAt;
   
-  // Convert model to JSON for Firestore
   Map<String, dynamic> toJson() {
     return {
       'namaBanten': namaBanten,
+      'name': namaBanten, // For compatibility
       'description': description,
-      'sejarah': sejarah,          // ADDED: Include sejarah field
       'daerah': daerah,
+      'sejarah': sejarah,
       'guddenKeyword': guddenKeyword,
       'photos': photos,
       'userId': userId,
-      'userName': userName,
-      'username': username,
-      'userEmail': userEmail,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
+      'userName': userName,
+      'userEmail': userEmail,
+      'username': username,
     };
   }
   
-  // Create model from Firestore JSON
-  factory BantenModel.fromJson(String id, Map<String, dynamic> json) {
-    // Helper function to handle Timestamp or String dates
-    DateTime getDateTime(dynamic timestamp) {
-      if (timestamp is Timestamp) {
-        return timestamp.toDate();
-      } else if (timestamp is String) {
-        try {
-          return DateTime.parse(timestamp);
-        } catch (e) {
-          print('Error parsing date string: $e');
-          return DateTime.now();
-        }
-      } else if (timestamp == null) {
-        return DateTime.now();
-      }
-      return DateTime.now();
-    }
-    
-    // Helper function to handle photos array
-    List<String> getPhotos(dynamic photos) {
-      if (photos is List) {
-        return photos.map((e) => e.toString()).where((photo) => photo.isNotEmpty).toList();
-      }
-      return [];
-    }
-    
-    // Helper function to get string value safely
-    String getStringValue(dynamic value, {String defaultValue = ''}) {
-      if (value == null) return defaultValue;
-      return value.toString().trim();
-    }
-    
+  // Factory constructor from Firestore document
+  factory BantenModel.fromFirestore(String id, Map<String, dynamic> data) {
     return BantenModel(
       id: id,
-      // FIXED: Konsisten dengan field Firebase dan TambahBanten
-      namaBanten: getStringValue(json['namaBanten']),
-      description: getStringValue(json['description']),
-      sejarah: getStringValue(json['sejarah']),        // ADDED: Parse sejarah field
-      daerah: getStringValue(json['daerah']),
-      guddenKeyword: getStringValue(json['guddenKeyword']),
-      photos: getPhotos(json['photos']),
-      userId: getStringValue(json['userId']),
-      userName: getStringValue(json['userName'], defaultValue: 'Anonymous'),
-      username: json['username'],
-      userEmail: json['userEmail'],
-      createdAt: getDateTime(json['createdAt']),
-      updatedAt: getDateTime(json['updatedAt']),
+      namaBanten: data['namaBanten'] ?? data['name'] ?? '', // Support both fields
+      description: data['description'] ?? '',
+      daerah: data['daerah'] ?? '',
+      sejarah: data['sejarah'] ?? '',
+      guddenKeyword: data['guddenKeyword'] ?? '',
+      photos: List<String>.from(data['photos'] ?? []),
+      userId: data['userId'] ?? '',
+      createdAt: data['createdAt'] != null 
+          ? (data['createdAt'] as Timestamp).toDate()
+          : DateTime.now(),
+      updatedAt: data['updatedAt'] != null 
+          ? (data['updatedAt'] as Timestamp).toDate()
+          : DateTime.now(),
+      userName: data['userName'],
+      userEmail: data['userEmail'],
+      username: data['username'],
     );
   }
   
-  // ADDED: Copy method untuk editing functionality
+  // Legacy factory constructor for backward compatibility
+  factory BantenModel.fromJson(String id, Map<String, dynamic> json) {
+    return BantenModel.fromFirestore(id, json);
+  }
+  
+  // Copy with method for updating
   BantenModel copyWith({
     String? id,
     String? namaBanten,
     String? description,
-    String? sejarah,
     String? daerah,
+    String? sejarah,
     String? guddenKeyword,
     List<String>? photos,
     String? userId,
-    String? userName,
-    String? username,
-    String? userEmail,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String? userName,
+    String? userEmail,
+    String? username,
   }) {
     return BantenModel(
       id: id ?? this.id,
       namaBanten: namaBanten ?? this.namaBanten,
       description: description ?? this.description,
-      sejarah: sejarah ?? this.sejarah,
       daerah: daerah ?? this.daerah,
+      sejarah: sejarah ?? this.sejarah,
       guddenKeyword: guddenKeyword ?? this.guddenKeyword,
       photos: photos ?? this.photos,
       userId: userId ?? this.userId,
-      userName: userName ?? this.userName,
-      username: username ?? this.username,
-      userEmail: userEmail ?? this.userEmail,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      userName: userName ?? this.userName,
+      userEmail: userEmail ?? this.userEmail,
+      username: username ?? this.username,
     );
-  }
-  
-  // ADDED: toString method untuk debugging
-  @override
-  String toString() {
-    return 'BantenModel{id: $id, namaBanten: $namaBanten, description: $description, sejarah: $sejarah, daerah: $daerah, guddenKeyword: $guddenKeyword, photos: $photos, userId: $userId, userName: $userName, createdAt: $createdAt}';
-  }
-  
-  // ADDED: Equality operators untuk comparison
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    
-    return other is BantenModel &&
-        other.id == id &&
-        other.namaBanten == namaBanten &&
-        other.description == description &&
-        other.sejarah == sejarah &&
-        other.daerah == daerah &&
-        other.guddenKeyword == guddenKeyword &&
-        other.userId == userId;
-  }
-  
-  @override
-  int get hashCode {
-    return id.hashCode ^
-        namaBanten.hashCode ^
-        description.hashCode ^
-        sejarah.hashCode ^
-        daerah.hashCode ^
-        guddenKeyword.hashCode ^
-        userId.hashCode;
-  }
-  
-  // ADDED: Validation methods
-  bool get isValid {
-    return namaBanten.isNotEmpty && 
-           description.isNotEmpty && 
-           userId.isNotEmpty && 
-           userName.isNotEmpty;
-  }
-  
-  bool get hasPhoto {
-    return photos.isNotEmpty;
-  }
-  
-  bool get hasSejarah {
-    return sejarah.isNotEmpty;
-  }
-  
-  bool get hasSumberReferensi {
-    return guddenKeyword.isNotEmpty;
   }
 }

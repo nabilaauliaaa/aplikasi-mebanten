@@ -46,6 +46,7 @@ dependencies:
   image_picker: ^1.1.2
   intl: ^0.20.2
   url_launcher: ^6.3.1
+  flutter_launcher_icons: ^0.14.3
  
 
 dev_dependencies:
@@ -62,6 +63,25 @@ dev_dependencies:
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/icon/LOGO.png"
+
+  adaptive_icon_background: "#86C0AC"  
+  adaptive_icon_foreground: "assets/images/icon/LOGO.png"
+  
+  min_sdk_android: 23
+  web:
+    generate: true
+    image_path: "assets/images/icon/LOGO.png"
+    background_color: "#86C0AC"
+    theme_color: "#86C0AC"
+  windows:
+    generate: true
+    image_path: "assets/images/icon/LOGO.png"
+    icon_size: 48
+
 # The following section is specific to Flutter packages.
 flutter:
 
@@ -74,6 +94,7 @@ flutter:
   assets:
     - assets/images/kedua.png
     - assets/images/
+    - assets/images/icon/LOGO.png
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see
