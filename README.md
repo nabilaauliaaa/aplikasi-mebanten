@@ -36,9 +36,9 @@
 | **Team Member** | **Student ID** | **GitHub** | **Role & Responsibilities** |
 |:----------------|:--------------:|:----------:|:---------------------------|
 | Nabila Aulia Azizah | 2215091040 | [@nabilaauliaaa](https://github.com/nabilaauliaaa) | UI/UX Designer, front End Login & Register Auth, Backend Developer, Problem Solver |
-| Ida Bagus Putu Hadi Pangestu | 2315091023 | @hadi755 | Front End "Splash screen, Welcome screen, and profile page" |
-| Galih Yuniar Prakoso | 2215091042 | @galih2003co | Front End "Add Banten page" |
-| Syarifudin Abdullah | 2215091032 | - | Front End "homescreen page" and "detail banten page" |
+| Ida Bagus Putu Hadi Pangestu | 2315091079 | [@hadi755](https://github.com/hadi755) | Front End "Splash screen, Welcome screen, and profile page" |
+| Galih Yuniar Prakoso | 2215091042 | [@galih2003co](https://github.com/galih2003co) | Front End "Add Banten page" |
+| Syarifudin Abdullah | 2215091032 | [@syarifabdllh](https://github.com/syarifabdllh) | Front End "homescreen page" and "detail banten page" |
 
 
 </div>
