@@ -20,11 +20,16 @@ class _ProfilePageState extends State<ProfilePage> {
   User? get currentUser => _auth.currentUser;
   bool _isLoading = true;
   Map<String, dynamic>? _userData;
+  List<Map<String, dynamic>> _bookmarkedBanten = [];
+  bool _isLoadingBookmarks = false;
 
   @override
   void initState() {
     super.initState();
     _fetchUserData();
+    if (currentUser != null) {
+      _fetchBookmarks();
+    }
   }
 
   Future<void> _fetchUserData() async {
@@ -60,6 +65,358 @@ class _ProfilePageState extends State<ProfilePage> {
         SnackBar(content: Text('Error loading profile: ${e.toString()}')),
       );
     }
+  }
+
+  Future<void> _fetchBookmarks() async {
+    if (currentUser == null) return;
+    
+    setState(() {
+      _isLoadingBookmarks = true;
+    });
+
+    try {
+      // Fetch bookmarks from user's document
+      final userDoc = await _firestore
+          .collection('users')
+          .doc(currentUser!.uid)
+          .get();
+      
+      List<String> bookmarkIds = [];
+      if (userDoc.exists && userDoc.data()?['bookmarks'] != null) {
+        bookmarkIds = List<String>.from(userDoc.data()!['bookmarks']);
+      }
+
+      if (bookmarkIds.isEmpty) {
+        setState(() {
+          _bookmarkedBanten = [];
+          _isLoadingBookmarks = false;
+        });
+        return;
+      }
+
+      // Fetch the actual banten data
+      List<Map<String, dynamic>> bookmarks = [];
+      for (String bantenId in bookmarkIds) {
+        try {
+          final bantenDoc = await _firestore
+              .collection('banten')
+              .doc(bantenId)
+              .get();
+          
+          if (bantenDoc.exists) {
+            Map<String, dynamic> bantenData = bantenDoc.data()!;
+            bantenData['id'] = bantenDoc.id;
+            bookmarks.add(bantenData);
+          }
+        } catch (e) {
+          print('Error fetching banten $bantenId: $e');
+        }
+      }
+
+      setState(() {
+        _bookmarkedBanten = bookmarks;
+        _isLoadingBookmarks = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingBookmarks = false;
+      });
+      print('Error fetching bookmarks: $e');
+    }
+  }
+
+  Future<void> _removeBookmark(String bantenId) async {
+    if (currentUser == null) return;
+
+    try {
+      await _firestore.collection('users').doc(currentUser!.uid).update({
+        'bookmarks': FieldValue.arrayRemove([bantenId])
+      });
+
+      // Refresh bookmarks
+      await _fetchBookmarks();
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Bookmark berhasil dihapus'),
+          backgroundColor: Color(0xFF4CAF50),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error removing bookmark: ${e.toString()}')),
+      );
+    }
+  }
+
+  void _showBookmarkDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.8,
+              maxWidth: MediaQuery.of(context).size.width * 0.9,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF4CAF50),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      topRight: Radius.circular(16),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.bookmark,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Banten Favorit',
+                          style: GoogleFonts.inter(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(
+                          Icons.close,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Content
+                Flexible(
+                  child: _isLoadingBookmarks
+                      ? const Padding(
+                          padding: EdgeInsets.all(40),
+                          child: CircularProgressIndicator(
+                            color: Color(0xFF4CAF50),
+                          ),
+                        )
+                      : _bookmarkedBanten.isEmpty
+                          ? Padding(
+                              padding: const EdgeInsets.all(40),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.bookmark_border,
+                                    size: 64,
+                                    color: Colors.grey[400],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'Belum ada banten favorit',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Tambahkan banten ke favorit dari halaman beranda',
+                                    textAlign: TextAlign.center,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      color: Colors.grey[500],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : ListView.builder(
+                              shrinkWrap: true,
+                              padding: const EdgeInsets.all(16),
+                              itemCount: _bookmarkedBanten.length,
+                              itemBuilder: (context, index) {
+                                final banten = _bookmarkedBanten[index];
+                                return _buildBookmarkItem(banten);
+                              },
+                            ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildBookmarkItem(Map<String, dynamic> banten) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            // Image
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                color: Colors.grey[200],
+              ),
+              child: banten['imageUrl'] != null
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        banten['imageUrl'],
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Icon(
+                            Icons.image_not_supported,
+                            color: Colors.grey[400],
+                            size: 30,
+                          );
+                        },
+                      ),
+                    )
+                  : Icon(
+                      Icons.image_not_supported,
+                      color: Colors.grey[400],
+                      size: 30,
+                    ),
+            ),
+            const SizedBox(width: 12),
+            // Content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    banten['nama'] ?? 'Nama Banten',
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    banten['kategori'] ?? 'Kategori',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  if (banten['deskripsi'] != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      banten['deskripsi'],
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: Colors.grey[500],
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            // Remove button
+            IconButton(
+              onPressed: () {
+                _showRemoveBookmarkDialog(banten['id'], banten['nama'] ?? 'Banten');
+              },
+              icon: Icon(
+                Icons.bookmark_remove,
+                color: Colors.red[400],
+                size: 20,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showRemoveBookmarkDialog(String bantenId, String bantenName) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text(
+            'Hapus Bookmark',
+            style: GoogleFonts.inter(
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+            ),
+          ),
+          content: Text(
+            'Apakah Anda yakin ingin menghapus "$bantenName" dari favorit?',
+            style: GoogleFonts.inter(
+              fontSize: 16,
+              color: Colors.grey[600],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Batal',
+                style: GoogleFonts.inter(
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).pop(); // Close bookmark dialog too
+                _removeBookmark(bantenId);
+              },
+              child: Text(
+                'Hapus',
+                style: GoogleFonts.inter(
+                  color: Colors.red,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   // Show logout confirmation dialog
@@ -409,6 +766,13 @@ class _ProfilePageState extends State<ProfilePage> {
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         children: [
+          // Bookmark menu item (new)
+          _buildMenuItem(
+            icon: Icons.bookmark_outlined,
+            title: 'Banten Favorit',
+            subtitle: '${_bookmarkedBanten.length} banten tersimpan',
+            onTap: _showBookmarkDialog,
+          ),
           _buildMenuItem(
             icon: Icons.settings_outlined,
             title: 'Settings',
@@ -493,10 +857,11 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // Individual menu item
+  // Individual menu item (updated to support subtitle)
   Widget _buildMenuItem({
     required IconData icon,
     required String title,
+    String? subtitle,
     required VoidCallback onTap,
   }) {
     return Container(
@@ -523,13 +888,28 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: Text(
-                  title,
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.grey[800],
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey[800],
+                      ),
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
               Icon(
