@@ -4,6 +4,8 @@ import '../services/banten_service.dart';
 import '../models/banten_model.dart';
 import '../services/auth_service.dart';
 import 'edit_banten_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class BantenDetailScreen extends StatefulWidget {
   final String bantenId;
@@ -24,10 +26,235 @@ class _BantenDetailScreenState extends State<BantenDetailScreen> {
   void initState() {
     super.initState();
     _loadBanten();
+    _loadBanten();
+    _checkIfBookmarked();
   }
   
   void _loadBanten() {
     _bantenFuture = _fetchBantenModel();
+  }
+
+  // Tambahkan variabel state di dalam class _DetailBantenPageState
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  
+  bool _isBookmarked = false;
+  bool _isCheckingBookmark = true;
+  bool _isBookmarkLoading = false;
+  
+  User? get currentUser => _auth.currentUser;
+
+  // Fungsi untuk mengecek apakah banten sudah di-bookmark
+  Future<void> _checkIfBookmarked() async {
+    if (currentUser == null || widget.bantenId == false) {
+      setState(() {
+        _isCheckingBookmark = false;
+      });
+      return;
+    }
+
+    try {
+      final userDoc = await _firestore
+          .collection('users')
+          .doc(currentUser!.uid)
+          .get();
+      
+      if (userDoc.exists && userDoc.data()?['bookmarks'] != null) {
+        List<String> bookmarks = List<String>.from(userDoc.data()!['bookmarks']);
+        setState(() {
+          _isBookmarked = bookmarks.contains(widget.bantenId);
+          _isCheckingBookmark = false;
+        });
+      } else {
+        setState(() {
+          _isBookmarked = false;
+          _isCheckingBookmark = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isCheckingBookmark = false;
+      });
+      print('Error checking bookmark status: $e');
+    }
+  }
+
+  // Fungsi untuk toggle bookmark
+  Future<void> _toggleBookmark() async {
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Silakan login terlebih dahulu'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (widget.bantenId == false) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error: ID banten tidak ditemukan'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isBookmarkLoading = true;
+    });
+
+    try {
+      if (_isBookmarked) {
+        // Remove bookmark
+        await _firestore.collection('users').doc(currentUser!.uid).update({
+          'bookmarks': FieldValue.arrayRemove([widget.bantenId])
+        });
+        
+        setState(() {
+          _isBookmarked = false;
+          _isBookmarkLoading = false;
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Dihapus dari favorit'),
+            backgroundColor: Color(0xFF4CAF50),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      } else {
+        // Add bookmark
+        await _firestore.collection('users').doc(currentUser!.uid).set({
+          'bookmarks': FieldValue.arrayUnion([widget.bantenId])
+        }, SetOptions(merge: true));
+        
+        setState(() {
+          _isBookmarked = true;
+          _isBookmarkLoading = false;
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Ditambahkan ke favorit'),
+            backgroundColor: Color(0xFF4CAF50),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isBookmarkLoading = false;
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+   // Widget untuk bookmark button
+  Widget _buildBookmarkButton() {
+    if (_isCheckingBookmark) {
+      return Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: const Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Color(0xFF4CAF50),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return GestureDetector(
+      onTap: _isBookmarkLoading ? null : _toggleBookmark,
+      child: Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: _isBookmarkLoading
+            ? const Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Color(0xFF4CAF50),
+                  ),
+                ),
+              )
+            : Icon(
+                _isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                color: _isBookmarked ? const Color(0xFF4CAF50) : Colors.grey[600],
+                size: 24,
+              ),
+      ),
+    );
+  }
+
+  // Widget untuk bookmark button alternatif (untuk di AppBar)
+  Widget _buildAppBarBookmarkButton() {
+    if (_isCheckingBookmark) {
+      return const Padding(
+        padding: EdgeInsets.all(8.0),
+        child: SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: Colors.white,
+          ),
+        ),
+      );
+    }
+
+    return IconButton(
+      onPressed: _isBookmarkLoading ? null : _toggleBookmark,
+      icon: _isBookmarkLoading
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            )
+          : Icon(
+              _isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+              color: Colors.white,
+            ),
+    );
   }
   
   // Fetch dan convert data dari Firebase
@@ -424,6 +651,67 @@ class _BantenDetailScreenState extends State<BantenDetailScreen> {
             ),
           );
         },
+      ),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Bookmark button
+            GestureDetector(
+              onTap: _isBookmarkLoading ? null : _toggleBookmark,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: _isBookmarked ? const Color(0xFF4CAF50).withOpacity(0.1) : Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: _isBookmarked ? const Color(0xFF4CAF50) : Colors.grey[300]!,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_isBookmarkLoading)
+                      const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Color(0xFF4CAF50),
+                        ),
+                      )
+                    else
+                      Icon(
+                        _isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                        color: _isBookmarked ? const Color(0xFF4CAF50) : Colors.grey[600],
+                        size: 20,
+                      ),
+                    const SizedBox(width: 8),
+                    Text(
+                      _isBookmarked ? 'Tersimpan' : 'Simpan',
+                      style: GoogleFonts.inter(
+                        color: _isBookmarked ? const Color(0xFF4CAF50) : Colors.grey[600],
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+          ],
+        ),
       ),
     );
   }
