@@ -360,7 +360,28 @@ class _BantenDetailScreenState extends State<BantenDetailScreen> {
                   ),
                   const SizedBox(height: 20),
                 ],
-                
+          
+
+                //ADD: Isi Banten section (field terpisah)
+                if (banten.isiBanten.isNotEmpty) ...[
+                  _buildSection(
+                    title: 'Isi Banten',
+                    content: banten.isiBanten,
+                    icon: Icons.forest,
+                  ),
+                  const SizedBox(height: 20),
+                ],
+
+                // ADDED: Cara Buat Banten section (field terpisah)
+                if (banten.carabuatBanten.isNotEmpty) ...[
+                  _buildSection(
+                    title: 'Cara Pembuatan Banten',
+                    content: banten.carabuatBanten,
+                    icon: Icons.nature,
+                  ),
+                  const SizedBox(height: 20),
+                ],
+
                 // ADDED: Sumber Referensi (guddenKeyword)
                 if (banten.guddenKeyword.isNotEmpty) ...[
                   _buildSection(
@@ -391,7 +412,7 @@ class _BantenDetailScreenState extends State<BantenDetailScreen> {
                             style: TextStyle(color: Colors.white),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
+                            backgroundColor: const Color.fromARGB(255, 42, 212, 124),
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
