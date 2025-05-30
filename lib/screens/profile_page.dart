@@ -99,7 +99,7 @@ class _ProfilePageState extends State<ProfilePage> {
       for (String bantenId in bookmarkIds) {
         try {
           final bantenDoc = await _firestore
-              .collection('banten')
+              .collection('bantens')
               .doc(bantenId)
               .get();
           
