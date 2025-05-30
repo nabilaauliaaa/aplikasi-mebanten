@@ -8,6 +8,8 @@ class BantenModel {
   final String description;
   final String daerah;
   final String sejarah;
+  final String isiBanten;
+  final String carabuatBanten;
   final String guddenKeyword;
   final List<String> photos;
   final String userId;
@@ -25,6 +27,8 @@ class BantenModel {
     required this.createdAt,
     this.daerah = '',
     this.sejarah = '',
+    this.isiBanten = '',
+    this.carabuatBanten = '',
     this.guddenKeyword = '',
     this.photos = const [],
     DateTime? updatedAt,
@@ -41,6 +45,8 @@ class BantenModel {
       'description': description,
       'daerah': daerah,
       'sejarah': sejarah,
+      'isiBanten': isiBanten,
+      'carabuatBanten': carabuatBanten,
       'guddenKeyword': guddenKeyword,
       'photos': photos,
       'userId': userId,
@@ -60,6 +66,8 @@ class BantenModel {
       description: data['description'] ?? '',
       daerah: data['daerah'] ?? '',
       sejarah: data['sejarah'] ?? '',
+      isiBanten: data['isiBanten'] ?? '',
+      carabuatBanten: data['carabuatBanten'] ?? '',
       guddenKeyword: data['guddenKeyword'] ?? '',
       photos: List<String>.from(data['photos'] ?? []),
       userId: data['userId'] ?? '',
@@ -87,6 +95,8 @@ class BantenModel {
     String? description,
     String? daerah,
     String? sejarah,
+    String? isiBanten,
+    String? carabuatBanten,
     String? guddenKeyword,
     List<String>? photos,
     String? userId,
@@ -102,6 +112,8 @@ class BantenModel {
       description: description ?? this.description,
       daerah: daerah ?? this.daerah,
       sejarah: sejarah ?? this.sejarah,
+      isiBanten: isiBanten ?? this.isiBanten,
+      carabuatBanten: carabuatBanten ?? this.carabuatBanten,
       guddenKeyword: guddenKeyword ?? this.guddenKeyword,
       photos: photos ?? this.photos,
       userId: userId ?? this.userId,

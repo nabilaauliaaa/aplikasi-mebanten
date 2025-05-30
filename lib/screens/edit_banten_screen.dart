@@ -17,18 +17,24 @@ class _EditBantenScreenState extends State<EditBantenScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _bantenNameController;
   late TextEditingController _bantenDescController;
-  late TextEditingController _daerahController; // Tambahkan controller untuk daerah
-  late TextEditingController _guddenKeywordController; // Tambahkan controller untuk sumber referensi
+  late TextEditingController _sejarahController; 
+  late TextEditingController _daerahController;
+  late TextEditingController _carabuatBantenController; 
+  late TextEditingController _isiBantenController;
+  late TextEditingController _guddenKeywordController;
   bool _isLoading = false;
   final BantenService _bantenService = BantenService();
   
   @override
   void initState() {
     super.initState();
-    // Ubah dari name dan description ke namaBanten dan description
+    
     _bantenNameController = TextEditingController(text: widget.banten.namaBanten);
     _bantenDescController = TextEditingController(text: widget.banten.description);
+    _sejarahController = TextEditingController(text: widget.banten.sejarah);
     _daerahController = TextEditingController(text: widget.banten.daerah);
+    _carabuatBantenController = TextEditingController(text: widget.banten.carabuatBanten);
+    _isiBantenController = TextEditingController(text: widget.banten.isiBanten);
     _guddenKeywordController = TextEditingController(text: widget.banten.guddenKeyword);
   }
   
@@ -36,7 +42,10 @@ class _EditBantenScreenState extends State<EditBantenScreen> {
   void dispose() {
     _bantenNameController.dispose();
     _bantenDescController.dispose();
+    _sejarahController.dispose();
     _daerahController.dispose();
+    _isiBantenController.dispose();
+    _carabuatBantenController.dispose();
     _guddenKeywordController.dispose();
     super.dispose();
   }
@@ -55,8 +64,11 @@ class _EditBantenScreenState extends State<EditBantenScreen> {
       await _bantenService.updateBanten(
         bantenId: widget.banten.id!,
         namaBanten: _bantenNameController.text.trim(),
-        daerah: _daerahController.text.trim(),
         description: _bantenDescController.text.trim(),
+        sejarah: _sejarahController.text.trim(),
+        daerah: _daerahController.text.trim(),
+        isiBanten: _isiBantenController.text.trim(),
+        carabuatBanten: _carabuatBantenController.text.trim(),
         guddenKeyword: _guddenKeywordController.text.trim(),
         existingImageUrls: widget.banten.photos, // Gunakan photos yang sudah ada
       );
@@ -146,6 +158,27 @@ class _EditBantenScreenState extends State<EditBantenScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
+
+                // Sejarah field
+                TextFormField(
+                  controller: _sejarahController,
+                  decoration: InputDecoration(
+                    labelText: 'Sejarah',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  maxLines: 3,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Sejarah tidak boleh kosong';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+
                 // Daerah field
                 TextFormField(
                   controller: _daerahController,
@@ -163,6 +196,47 @@ class _EditBantenScreenState extends State<EditBantenScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
+
+                //isi Banten field
+                TextFormField(
+                  controller: _isiBantenController,
+                  decoration: InputDecoration(
+                    labelText: 'Isi Banten',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  maxLines: 3,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Isi Banten tidak boleh kosong';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+
+                // Cara Buat Banten field
+                TextFormField(
+                  controller: _carabuatBantenController,
+                  decoration: InputDecoration(
+                    labelText: 'Cara Buat Banten',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  maxLines: 3,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Cara Buat Banten tidak boleh kosong';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+
                 // Sumber Referensi field
                 TextFormField(
                   controller: _guddenKeywordController,
@@ -200,6 +274,7 @@ class _EditBantenScreenState extends State<EditBantenScreen> {
                             style: GoogleFonts.inter(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
+                              color: Colors.white,
                             ),
                           ),
                   ),

@@ -433,7 +433,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 32),
             Text(
-              'No banten yet',
+              'Tidak ada banten yang ditemukan',
               style: GoogleFonts.inter(
                 fontSize: 24,
                 fontWeight: FontWeight.w600,
@@ -442,7 +442,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Start by adding your first banten to share with the community',
+              'Tambahkan banten pertama anda untuk memulai!',
               style: GoogleFonts.inter(
                 fontSize: 16,
                 color: Colors.grey[600],
@@ -463,11 +463,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 elevation: 0,
                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(5),
                 ),
               ),
               child: Text(
-                'Add First Banten',
+                'Tambahkan Banten pertamamu di sini!',
                 style: GoogleFonts.inter(
                   color: Colors.white,
                   fontWeight: FontWeight.w600,
@@ -504,7 +504,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 24),
             Text(
-              'No results found',
+              'Tidak ada hasil untuk "$_searchQuery"',
               style: GoogleFonts.inter(
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
@@ -513,7 +513,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Try searching with different keywords',
+              'Cari Bantenmu di sini!',
               style: GoogleFonts.inter(
                 fontSize: 16,
                 color: Colors.grey[600],

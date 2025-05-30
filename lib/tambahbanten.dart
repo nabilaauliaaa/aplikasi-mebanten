@@ -5,6 +5,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:permission_handler/permission_handler.dart';  // ← NEW: Permission handling
 import '../auth/login_screen.dart';
 import './screens/profile_page.dart';
 import './screens/home_screen.dart';
@@ -23,6 +24,8 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _sejarahController = TextEditingController();
   final TextEditingController _daerahController = TextEditingController();
+  final TextEditingController _isiBantenController = TextEditingController();
+  final TextEditingController _carabuatBantenController = TextEditingController();
   final TextEditingController _sumberReferensiController = TextEditingController();
   final TextEditingController _imageLinkController = TextEditingController();
   
@@ -32,9 +35,11 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final ImagePicker _picker = ImagePicker();
   
+  // ENHANCED: Support camera + gallery + link (but still single image)
   File? _selectedImage;
   bool _isUploading = false;
   String? _previewImageUrl;
+  String _imageSource = ''; // Track source: "camera", "gallery", "link"
 
   @override
   void initState() {
@@ -62,6 +67,8 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
     _descriptionController.dispose();
     _sejarahController.dispose();
     _daerahController.dispose();
+    _isiBantenController.dispose();
+    _carabuatBantenController.dispose();
     _sumberReferensiController.dispose();
     _imageLinkController.dispose();
     super.dispose();
@@ -94,69 +101,333 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
     }
   }
   
-  // Function to pick image
-  Future<void> _pickImage() async {
+  // ENHANCED: Show image source selection dialog (Camera + Gallery only)
+  void _showImageSourceDialog() {
+    print('🔍 DEBUG: Image source dialog opened');
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Pilih Sumber Gambar'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(Icons.camera_alt, color: Color(0xFF4CAF50)),
+                title: Text('Ambil Foto'),
+                subtitle: Text('Gunakan kamera'),
+                onTap: () {
+                  print('🔍 DEBUG: Camera option selected');
+                  Navigator.pop(context);
+                  _pickImage(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.photo_library, color: Color(0xFF4CAF50)),
+                title: Text('Pilih dari Galeri'),
+                subtitle: Text('Pilih foto yang ada'),
+                onTap: () {
+                  print('🔍 DEBUG: Gallery option selected');
+                  Navigator.pop(context);
+                  _pickImage(ImageSource.gallery);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // NEW: Check and request permissions
+  Future<void> _checkPermissions() async {
+    print('🔍 DEBUG: Checking permissions...');
+    
     try {
+      // Check storage permission
+      final storageStatus = await Permission.storage.status;
+      print('🔍 DEBUG: Storage permission status: $storageStatus');
+      
+      // Check camera permission  
+      final cameraStatus = await Permission.camera.status;
+      print('🔍 DEBUG: Camera permission status: $cameraStatus');
+      
+      // Check photos permission (for iOS and Android 13+)
+      final photosStatus = await Permission.photos.status;
+      print('🔍 DEBUG: Photos permission status: $photosStatus');
+      
+      // Request storage permission if not granted
+      if (!storageStatus.isGranted) {
+        print('🔍 DEBUG: Requesting storage permission...');
+        final result = await Permission.storage.request();
+        print('🔍 DEBUG: Storage permission request result: $result');
+        
+        if (!result.isGranted) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Storage permission diperlukan untuk memilih gambar'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      }
+      
+      // Request camera permission if not granted
+      if (!cameraStatus.isGranted) {
+        print('🔍 DEBUG: Requesting camera permission...');
+        final result = await Permission.camera.request();
+        print('🔍 DEBUG: Camera permission request result: $result');
+        
+        if (!result.isGranted) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Camera permission diperlukan untuk mengambil foto'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      }
+
+      // Request photos permission if not granted (for Android 13+)
+      if (!photosStatus.isGranted) {
+        print('🔍 DEBUG: Requesting photos permission...');
+        final result = await Permission.photos.request();
+        print('🔍 DEBUG: Photos permission request result: $result');
+      }
+      
+      print('✅ DEBUG: Permission check completed');
+      
+    } catch (e) {
+      print('💥 DEBUG: Error checking permissions: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error checking permissions: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+  
+  // ENHANCED: Function to pick image (now supports camera + gallery) - WITH FULL DEBUG
+  Future<void> _pickImage(ImageSource source) async {
+    // NEW: Check permissions first
+    await _checkPermissions();
+    
+    try {
+      print('🔍 DEBUG: Starting image pick from $source');
+      print('🔍 DEBUG: ImagePicker instance: ${_picker.runtimeType}');
+      print('🔍 DEBUG: Current platform: ${Theme.of(context).platform}');
+      
       final XFile? image = await _picker.pickImage(
-        source: ImageSource.gallery,
+        source: source, // ← ENHANCED: Can be camera or gallery
         maxWidth: 1920,
         maxHeight: 1080,
         imageQuality: 80,
       );
+      
+      print('🔍 DEBUG: Image picker completed');
+      print('🔍 DEBUG: Selected image: ${image?.path}');
+      print('🔍 DEBUG: Image name: ${image?.name}');
+      print('🔍 DEBUG: Image mimeType: ${image?.mimeType}');
+      
       if (image != null) {
-        setState(() {
-          _selectedImage = File(image.path);
-          _previewImageUrl = null;
-          _imageLinkController.clear(); // Clear image link when file selected
-        });
+        final file = File(image.path);
+        print('🔍 DEBUG: File created from path: ${image.path}');
+        print('🔍 DEBUG: File exists: ${file.existsSync()}');
+        
+        if (file.existsSync()) {
+          final fileSize = await file.length();
+          print('🔍 DEBUG: File size: $fileSize bytes (${(fileSize / 1024).toStringAsFixed(2)} KB)');
+          
+          // Test reading file to make sure it's accessible
+          try {
+            final bytes = await file.readAsBytes();
+            print('🔍 DEBUG: File readable, byte length: ${bytes.length}');
+          } catch (e) {
+            print('❌ DEBUG: File not readable: $e');
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('File tidak dapat dibaca: $e'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+            return;
+          }
+          
+          setState(() {
+            _selectedImage = File(image.path);
+            _previewImageUrl = null;
+            _imageLinkController.clear(); // Clear image link when file selected
+            _imageSource = source == ImageSource.camera ? 'camera' : 'gallery';
+          });
+          
+          print('✅ DEBUG: State updated successfully');
+          print('🔍 DEBUG: _selectedImage is null: ${_selectedImage == null}');
+          print('🔍 DEBUG: _selectedImage path: ${_selectedImage?.path}');
+          print('🔍 DEBUG: _imageSource: $_imageSource');
+          
+          // Success feedback
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Gambar berhasil dipilih dari $_imageSource'),
+                backgroundColor: Color(0xFF4CAF50),
+                duration: Duration(seconds: 2),
+              ),
+            );
+          }
+        } else {
+          print('❌ DEBUG: File does not exist at the specified path');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('File gambar tidak ditemukan di path: ${image.path}'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      } else {
+        print('❌ DEBUG: No image selected (user cancelled or error)');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Tidak ada gambar yang dipilih'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error picking image: ${e.toString()}')),
-      );
+    } catch (e, stackTrace) {
+      print('💥 DEBUG: Error picking image: $e');
+      print('💥 DEBUG: Error type: ${e.runtimeType}');
+      print('💥 DEBUG: Stack trace: $stackTrace');
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error picking image: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
     }
   }
   
-  // Function to preview link image
+  // ENHANCED: Function to preview link image - WITH DEBUG
   void _previewLinkImage() {
     final url = _imageLinkController.text.trim();
+    print('🔍 DEBUG: Preview link called with URL: $url');
+    
     if (url.isNotEmpty) {
       setState(() {
         _previewImageUrl = url;
         _selectedImage = null; // Clear file when link is used
+        _imageSource = 'link';
       });
+      print('✅ DEBUG: Link preview set successfully');
+      print('🔍 DEBUG: _previewImageUrl: $_previewImageUrl');
+      print('🔍 DEBUG: _imageSource: $_imageSource');
     } else {
       setState(() {
         _previewImageUrl = null;
+        _imageSource = '';
       });
+      print('🔍 DEBUG: Link preview cleared');
     }
   }
   
-  // Function to upload image and get URL
+  // ENHANCED: Function to upload image and get URL - WITH FULL DEBUG
   Future<String?> _uploadImage() async {
+    print('🔍 DEBUG: Starting upload process');
+    print('🔍 DEBUG: _selectedImage is null: ${_selectedImage == null}');
+    print('🔍 DEBUG: _imageLinkController.text: ${_imageLinkController.text}');
+    print('🔍 DEBUG: _previewImageUrl: $_previewImageUrl');
+    
+    // If using link, return the link directly
     if (_selectedImage == null && _imageLinkController.text.isNotEmpty) {
+      print('✅ DEBUG: Using link URL: ${_imageLinkController.text.trim()}');
       return _imageLinkController.text.trim();
     }
     
+    // If no file selected, return null
     if (_selectedImage == null) {
+      print('❌ DEBUG: No image to upload');
       return null;
     }
     
     try {
-      final path = 'banten/${DateTime.now().millisecondsSinceEpoch}_image.jpg';
-      final ref = _storage.ref().child(path);
-      final uploadTask = ref.putFile(_selectedImage!);
+      print('🔍 DEBUG: Uploading file to Firebase Storage');
+      print('🔍 DEBUG: File path: ${_selectedImage!.path}');
+      print('🔍 DEBUG: File exists before upload: ${_selectedImage!.existsSync()}');
       
-      final snapshot = await uploadTask.whenComplete(() {});
+      if (!_selectedImage!.existsSync()) {
+        print('❌ DEBUG: File does not exist, cannot upload');
+        return null;
+      }
+      
+      final fileSize = await _selectedImage!.length();
+      print('🔍 DEBUG: File size before upload: $fileSize bytes');
+      
+      // Test file readability before upload
+      try {
+        final bytes = await _selectedImage!.readAsBytes();
+        print('🔍 DEBUG: File readable for upload, byte length: ${bytes.length}');
+      } catch (e) {
+        print('❌ DEBUG: File not readable for upload: $e');
+        return null;
+      }
+      
+      final path = 'banten/${DateTime.now().millisecondsSinceEpoch}_image.jpg';
+      print('🔍 DEBUG: Firebase Storage path: $path');
+      
+      final ref = _storage.ref().child(path);
+      print('🔍 DEBUG: Storage reference created');
+      
+      final uploadTask = ref.putFile(_selectedImage!);
+      print('🔍 DEBUG: Upload task started');
+      
+      // Monitor upload progress
+      uploadTask.snapshotEvents.listen((snapshot) {
+        final progress = snapshot.bytesTransferred / snapshot.totalBytes;
+        print('🔍 DEBUG: Upload progress: ${(progress * 100).toStringAsFixed(1)}% (${snapshot.bytesTransferred}/${snapshot.totalBytes} bytes)');
+      });
+      
+      final snapshot = await uploadTask.whenComplete(() {
+        print('🔍 DEBUG: Upload completed');
+      });
+      
       final url = await snapshot.ref.getDownloadURL();
+      print('✅ DEBUG: Download URL obtained: $url');
+      
       return url;
-    } catch (e) {
-      print('Error uploading image: ${e.toString()}');
+    } catch (e, stackTrace) {
+      print('💥 DEBUG: Error uploading image: $e');
+      print('💥 DEBUG: Upload error type: ${e.runtimeType}');
+      print('💥 DEBUG: Upload stack trace: $stackTrace');
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error uploading image: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
       return null;
     }
   }
   
-  // Function to save data to Firestore
+  // ENHANCED: Function to save data to Firestore
   Future<void> _saveBantenData() async {
     final User? currentUser = _auth.currentUser;
     if (currentUser == null) {
@@ -178,25 +449,34 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
     });
     
     try {
+      print('🔍 DEBUG: Starting save process');
+      
       // 1. Get user data
       DocumentSnapshot userDoc = await _firestore.collection('users').doc(currentUser.uid).get();
       Map<String, dynamic>? userData = userDoc.exists ? userDoc.data() as Map<String, dynamic> : null;
+      print('🔍 DEBUG: User data retrieved');
       
       // 2. Upload image if selected or use image link
       String? imageUrl;
       if (_selectedImage != null) {
+        print('🔍 DEBUG: Uploading file image');
         imageUrl = await _uploadImage();
       } else if (_previewImageUrl != null) {
+        print('🔍 DEBUG: Using preview URL');
         imageUrl = _previewImageUrl;
       } else if (_imageLinkController.text.isNotEmpty) {
+        print('🔍 DEBUG: Using link field URL');
         imageUrl = _imageLinkController.text.trim();
       }
+      
+      print('🔍 DEBUG: Final image URL: $imageUrl');
       
       // 3. Create photos array
       List<String> photos = [];
       if (imageUrl != null && imageUrl.isNotEmpty) {
         photos.add(imageUrl);
       }
+      print('🔍 DEBUG: Photos array: $photos');
       
       // 4. Save data to Firestore
       await _firestore.collection('bantens').add({
@@ -204,7 +484,9 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
         'namaBanten': _namaBantenController.text.trim(),          
         'description': _descriptionController.text.trim(),  
         'sejarah': _sejarahController.text.trim(),          
-        'daerah': _daerahController.text.trim(),             
+        'daerah': _daerahController.text.trim(),
+        'isiBanten': _isiBantenController.text.trim(),
+        'carabuatBanten': _carabuatBantenController.text.trim(),             
         'guddenKeyword': _sumberReferensiController.text.trim(),
         'photos': photos,
         'createdAt': FieldValue.serverTimestamp(),
@@ -214,6 +496,8 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
         'username': userData?['username'] ?? '',
       });
       
+      print('✅ DEBUG: Data saved to Firestore successfully');
+      
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Banten berhasil disimpan'),
@@ -222,7 +506,11 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
       );
       
       Navigator.of(context).pop();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('💥 DEBUG: Error saving data: $e');
+      print('💥 DEBUG: Save error type: ${e.runtimeType}');
+      print('💥 DEBUG: Save stack trace: $stackTrace');
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: ${e.toString()}')),
       );
@@ -302,7 +590,7 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
               _buildTextField(
                 controller: _sejarahController,
                 hintText: 'Sejarah',
-                maxLines: 5,
+                maxLines: 4,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Mohon isi sejarah';
@@ -324,8 +612,34 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
                 },
               ),
               const SizedBox(height: 16),
-              
-              // ENHANCED: Sumber Referensi Field with URL launcher
+
+              _buildTextField(
+                controller: _isiBantenController,
+                hintText: 'Isi Banten',
+                maxLines: 3,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Mohon isi komponen dari banten yang ingin ditambahkan';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+
+              _buildTextField(
+                controller: _carabuatBantenController,
+                hintText: 'Cara Pembuatan Banten',
+                maxLines: 7,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Mohon isi cara pembuatan banten';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Sumber Referensi Field with URL launcher
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -338,6 +652,7 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
                     },
                   ),
                   const SizedBox(height: 8),
+
                   if (_sumberReferensiController.text.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(left: 16),
@@ -367,11 +682,14 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
               ),
               const SizedBox(height: 16),
               
-              // ENHANCED: Image picker area
+              // ENHANCED: Image picker area with 3 sources support - WITH DEBUG UI
               GestureDetector(
-                onTap: _pickImage,
+                onTap: () {
+                  print('🔍 DEBUG: Image area tapped');
+                  _showImageSourceDialog();
+                },
                 child: Container(
-                  height: 200, // Increased height
+                  height: 200,
                   width: double.infinity,
                   decoration: BoxDecoration(
                     color: const Color(0xFFE3F2FD),
@@ -388,6 +706,72 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
                                 width: double.infinity,
                                 height: 200,
                                 fit: BoxFit.cover,
+                                frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+                                  if (frame == null) {
+                                    print('🔍 DEBUG: Image frame is null, still loading...');
+                                    return Container(
+                                      color: Colors.grey[200],
+                                      child: Center(
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            CircularProgressIndicator(color: Color(0xFF4CAF50)),
+                                            SizedBox(height: 8),
+                                            Text('Loading image...'),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                  print('✅ DEBUG: Image frame loaded: $frame');
+                                  return child;
+                                },
+                                errorBuilder: (context, error, stackTrace) {
+                                  print('💥 DEBUG: Image display error: $error');
+                                  print('💥 DEBUG: Image error type: ${error.runtimeType}');
+                                  print('💥 DEBUG: Image error stack: $stackTrace');
+                                  return Container(
+                                    color: Colors.red[100],
+                                    child: Center(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.error, color: Colors.red, size: 40),
+                                          SizedBox(height: 8),
+                                          Text('Image Error', style: TextStyle(fontWeight: FontWeight.bold)),
+                                          SizedBox(height: 4),
+                                          Text('Tap to retry', style: TextStyle(fontSize: 12)),
+                                          SizedBox(height: 4),
+                                          Text(
+                                            'Error: ${error.toString()}',
+                                            style: TextStyle(fontSize: 10, color: Colors.red),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            // ENHANCED: Source indicator
+                            Positioned(
+                              top: 8,
+                              left: 8,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.black54,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  _imageSource.toUpperCase(),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ),
                             ),
                             Positioned(
@@ -395,9 +779,12 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
                               right: 8,
                               child: GestureDetector(
                                 onTap: () {
+                                  print('🔍 DEBUG: Remove image button tapped');
                                   setState(() {
                                     _selectedImage = null;
+                                    _imageSource = '';
                                   });
+                                  print('✅ DEBUG: Image removed from state');
                                 },
                                 child: Container(
                                   padding: const EdgeInsets.all(4),
@@ -426,7 +813,11 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
                                     height: 200,
                                     fit: BoxFit.cover,
                                     loadingBuilder: (context, child, loadingProgress) {
-                                      if (loadingProgress == null) return child;
+                                      if (loadingProgress == null) {
+                                        print('✅ DEBUG: Network image loaded successfully');
+                                        return child;
+                                      }
+                                      print('🔍 DEBUG: Loading network image... ${loadingProgress.cumulativeBytesLoaded}/${loadingProgress.expectedTotalBytes}');
                                       return const Center(
                                         child: CircularProgressIndicator(
                                           color: Color(0xFF4CAF50),
@@ -434,6 +825,7 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
                                       );
                                     },
                                     errorBuilder: (context, error, stackTrace) {
+                                      print('💥 DEBUG: Network image error: $error');
                                       return const Center(
                                         child: Column(
                                           mainAxisAlignment: MainAxisAlignment.center,
@@ -448,15 +840,38 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
                                     },
                                   ),
                                 ),
+                                // ENHANCED: Source indicator for link
+                                Positioned(
+                                  top: 8,
+                                  left: 8,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black54,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Text(
+                                      'LINK',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
                                 Positioned(
                                   top: 8,
                                   right: 8,
                                   child: GestureDetector(
                                     onTap: () {
+                                      print('🔍 DEBUG: Remove link image button tapped');
                                       setState(() {
                                         _previewImageUrl = null;
                                         _imageLinkController.clear();
+                                        _imageSource = '';
                                       });
+                                      print('✅ DEBUG: Link image removed from state');
                                     },
                                     child: Container(
                                       padding: const EdgeInsets.all(4),
@@ -492,6 +907,14 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
+                                  SizedBox(height: 4),
+                                  Text(
+                                    'Pilih dari kamera atau galeri',
+                                    style: TextStyle(
+                                      color: Colors.grey,
+                                      fontSize: 12,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -499,17 +922,19 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
               ),
               const SizedBox(height: 16),
               
-              // Paste the image link Field
+              // KEPT: Original image link field (for direct paste)
               _buildTextField(
                 controller: _imageLinkController,
-                hintText: 'Paste the image link (opsional)',
+                hintText: 'Salin tautan gambar (opsional)',
                 keyboardType: TextInputType.url,
                 onChanged: (value) {
+                  print('🔍 DEBUG: Image link field changed: $value');
                   if (value.isNotEmpty) {
                     _previewLinkImage();
                   } else {
                     setState(() {
                       _previewImageUrl = null;
+                      _imageSource = '';
                     });
                   }
                 },
@@ -622,7 +1047,7 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
     );
   }
   
-  // Enhanced helper method to build text fields
+  // Helper method to build text fields
   Widget _buildTextField({
     required TextEditingController controller,
     required String hintText,
