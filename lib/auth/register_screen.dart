@@ -63,13 +63,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
         
         // 4. Simpan data user ke Firestore
         await _firestore.collection('users').doc(userCredential.user!.uid).set({
-          'uid': userCredential.user!.uid,           // Tambahkan uid untuk referensi
-          'name': _nameController.text.trim(),       // Nama user
-          'email': _emailController.text.trim(),     // Email user
-          'username': username,                      // Username yang digenerate
-          'photoURL': null,                          // Awalnya tidak ada foto
-          'createdAt': FieldValue.serverTimestamp(), // Waktu pembuatan akun
-          'updatedAt': FieldValue.serverTimestamp(), // Sama dengan createdAt untuk akun baru
+          'uid': userCredential.user!.uid,           
+          'name': _nameController.text.trim(),       
+          'email': _emailController.text.trim(),     
+          'username': username,                     
+          'photoURL': null,                          
+          'createdAt': FieldValue.serverTimestamp(), 
+          'updatedAt': FieldValue.serverTimestamp(), 
         });
         
         // 5. Update display name di Firebase Auth
@@ -77,7 +77,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         
         // 6. Show success message
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Registration successful. Please log in.')),
+          const SnackBar(content: Text('Pendaftaran akun berhasil! Silakan masuk')),
         );
         
         // 7. Navigate to login screen
@@ -90,19 +90,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
       
       switch (e.code) {
         case 'weak-password':
-          message = 'The password is too weak.';
+          message = 'Kata Sandi terlalu lemah, masukkan 8 karakter.';
           break;
         case 'email-already-in-use':
-          message = 'The email address is already in use.';
+          message = 'Alamat email telah terdaftar.';
           break;
         case 'invalid-email':
-          message = 'The email address is not valid.';
+          message = 'Alamat email tidak valid.';
           break;
         case 'operation-not-allowed':
-          message = 'Email/password accounts are not enabled.';
+          message = 'Alamat email/kata sandi tidak valid.';
           break;
         default:
-          message = 'An error occurred. Please try again.';
+          message = 'Terjadi error. Silakan coba lagi';
       }
       
       setState(() {
@@ -144,7 +144,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Sign up',
+                'Daftar Akun',
                 style: GoogleFonts.inter(
                   fontSize: screenHeight * 0.04,
                   fontWeight: FontWeight.bold,
@@ -153,7 +153,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               SizedBox(height: screenHeight * 0.01),
               Text(
-                'Create an account to get started!',
+                'Daftar akun untuk memulai!',
                 style: GoogleFonts.inter(
                   fontSize: screenHeight * 0.02,
                   color: Colors.grey[600],
@@ -163,7 +163,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               
               // Name field
               Text(
-                'Name',
+                'Nama',
                 style: GoogleFonts.inter(
                   fontSize: screenHeight * 0.018,
                   fontWeight: FontWeight.w500,
@@ -199,7 +199,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               
               // Email field
               Text(
-                'Email Address',
+                'Alamat Email',
                 style: GoogleFonts.inter(
                   fontSize: screenHeight * 0.018,
                   fontWeight: FontWeight.w500,
@@ -352,26 +352,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     child: RichText(
                       text: TextSpan(
                         style: GoogleFonts.inter(
-                          color: Colors.grey[600],
-                          fontSize: screenHeight * 0.014,
+                          color: const Color.fromARGB(255, 0, 0, 0),
+                          fontSize: screenHeight * 0.018,
                         ),
                         children: [
-                          const TextSpan(text: "Saya telah membaca dan menyetujui"),
+                          const TextSpan(text: "Saya telah membaca dan menyetujui "),
                           TextSpan(
                             text: "Syarat dan Ketentuan",
                             style: GoogleFonts.inter(
                               color: const Color(0xFF3FAE82),
-                              fontSize: screenHeight * 0.014,
+                              fontSize: screenHeight * 0.018,
                               decoration: TextDecoration.underline,
                               decorationColor: const Color(0xFF3FAE82),
                             ),
                           ),
-                          const TextSpan(text: " and the "),
+                          const TextSpan(text: " dan "),
                           TextSpan(
-                            text: "Privacy Policy",
+                            text: "Kebijakan Privasi",
                             style: GoogleFonts.inter(
                               color: const Color(0xFF3FAE82),
-                              fontSize: screenHeight * 0.014,
+                              fontSize: screenHeight * 0.018,
                               decoration: TextDecoration.underline,
                               decorationColor: const Color(0xFF3FAE82),
                             ),
@@ -408,7 +408,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                         )
                       : Text(
-                          'Sign Up',
+                          'Daftar Akun',
                           style: GoogleFonts.inter(
                             fontSize: screenHeight * 0.022,
                             fontWeight: FontWeight.w600,
@@ -424,7 +424,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 child: RichText(
                   text: TextSpan(
                     style: GoogleFonts.inter(
-                      color: Colors.grey[600],
+                      color: const Color.fromARGB(255, 0, 0, 0),
                       fontSize: screenHeight * 0.018,
                     ),
                     children: [
@@ -441,7 +441,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             'Masuk di sini', 
                             style: GoogleFonts.inter(
                               color: const Color(0xFF3FAE82),
-                              fontSize: 20,
+                              fontSize: 18,
                               fontWeight: FontWeight.bold,
                             ),
                           ),

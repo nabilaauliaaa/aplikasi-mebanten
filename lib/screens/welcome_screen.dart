@@ -67,25 +67,31 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               ),
             ],
           ),
-          // Next Button
+          // ✅ FIXED: Next Button dengan ukuran yang tepat
           Align(
             alignment: Alignment.bottomCenter,
             child: Padding(
               padding: const EdgeInsets.all(24.0),
-              child: ElevatedButton(
-                onPressed: _nextPage,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF53B493),
-                  foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(horizontal: 155, vertical: 14),
-                  textStyle: GoogleFonts.inter(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
+              child: SizedBox(
+                width: double.infinity, // Full width
+                child: ElevatedButton(
+                  onPressed: _nextPage,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFF53B493),
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16), // ✅ FIXED: Proper padding
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12), // ✅ ADDED: Rounded corners
+                    ),
                   ),
-                  
+                  child: Text(
+                    currentPage == 1 ? 'Masuk' : 'Selanjutnya',
+                    style: GoogleFonts.inter(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
-                child: Text(currentPage == 1 ? 'Log In' : 'Next'),
-                
               ),
             ),
           ),
@@ -122,7 +128,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     color: Colors.black,
                   ),
                 ),
-                SizedBox(height: 15),  // Adjusted height
+                SizedBox(height: 15),
                 Text(
                   subtitle,
                   style: GoogleFonts.inter(
@@ -131,7 +137,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                SizedBox(height: 90), // Reduced distance between subtitle and button
+                SizedBox(height: 90), // Space for button
               ],
             ),
           ),

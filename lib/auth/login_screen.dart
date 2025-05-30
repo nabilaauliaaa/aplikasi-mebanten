@@ -25,6 +25,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isPasswordVisible = false;
   bool _isLoading = false;
   String? _errorMessage;
+  bool _isFormValid = false;
   
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -32,7 +33,9 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    // Tampilkan message jika ada
+    _emailController.addListener(_validateForm);
+    _passwordController.addListener(_validateForm);
+  
 
     if (widget.message != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -50,6 +53,13 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
   
+  // Function to validate form fields
+  void _validateForm() {
+    setState(() {
+      _isFormValid = _emailController.text.isNotEmpty && _passwordController.text.isNotEmpty;
+    });
+  }
+
   // Function to handle login - Revised
   Future<void> _login() async {
     setState(() {
@@ -125,7 +135,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Dapatkan ukuran layar
+   
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
     
@@ -190,7 +200,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             style: GoogleFonts.inter(),
                             decoration: InputDecoration(
                               hintText: 'Alamat Email',
-                              hintStyle: GoogleFonts.inter(color: Colors.grey[500]),
+                              hintStyle: GoogleFonts.inter(color: const Color.fromARGB(255, 95, 95, 95)),
                               filled: true,
                               fillColor: Colors.grey[100],
                               border: OutlineInputBorder(
@@ -212,7 +222,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             obscureText: !_isPasswordVisible,
                             decoration: InputDecoration(
                               hintText: 'Kata Sandi',
-                              hintStyle: GoogleFonts.inter(color: Colors.grey[500]),
+                              hintStyle: GoogleFonts.inter(color: const Color.fromARGB(255, 95, 95, 95)),
                               filled: true,
                               fillColor: Colors.grey[100],
                               border: OutlineInputBorder(
@@ -245,7 +255,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               'Lupa Password?',
                               style: GoogleFonts.inter(
                                 color: const Color(0xFF3FAE82),
-                                fontSize: screenHeight * 0.018,
+                                fontSize: screenHeight * 0.022,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -272,9 +282,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           width: double.infinity,
                           height: screenHeight * 0.055,
                           child: ElevatedButton(
-                            onPressed: _isLoading ? null : _login,
+                            onPressed: (_isFormValid && !_isLoading) ? _login : null,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF53B493),
+                              disabledBackgroundColor: Colors.grey[300],
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
@@ -306,7 +317,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: RichText(
                             text: TextSpan(
                               style: GoogleFonts.inter(
-                                color: Colors.grey[600],
+                                color: const Color.fromARGB(255, 0, 0, 0),
                                 fontSize: screenHeight * 0.018,
                               ),
                               children: [
@@ -323,7 +334,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                       'Daftar di sini',
                                       style: GoogleFonts.inter(
                                         color: const Color(0xFF3FAE82),
-                                        fontSize: 20,
+                                        fontSize: 18,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
@@ -340,7 +351,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: Text(
                             'Atau lanjutkan dengan',
                             style: GoogleFonts.inter(
-                              color: Colors.grey[600],
+                              color: const Color.fromARGB(255, 0, 0, 0),
                               fontSize: screenHeight * 0.018,
                             ),
                           ),

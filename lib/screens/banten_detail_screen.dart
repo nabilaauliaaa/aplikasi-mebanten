@@ -22,19 +22,7 @@ class _BantenDetailScreenState extends State<BantenDetailScreen> {
   late Future<BantenModel?> _bantenFuture;
   bool _isLoading = false;
   
-  @override
-  void initState() {
-    super.initState();
-    _loadBanten();
-    _loadBanten();
-    _checkIfBookmarked();
-  }
-  
-  void _loadBanten() {
-    _bantenFuture = _fetchBantenModel();
-  }
-
-  // Tambahkan variabel state di dalam class _DetailBantenPageState
+  // Bookmark functionality variables
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   
@@ -44,9 +32,20 @@ class _BantenDetailScreenState extends State<BantenDetailScreen> {
   
   User? get currentUser => _auth.currentUser;
 
+  @override
+  void initState() {
+    super.initState();
+    _loadBanten();
+    _checkIfBookmarked();
+  }
+  
+  void _loadBanten() {
+    _bantenFuture = _fetchBantenModel();
+  }
+
   // Fungsi untuk mengecek apakah banten sudah di-bookmark
   Future<void> _checkIfBookmarked() async {
-    if (currentUser == null || widget.bantenId == false) {
+    if (currentUser == null) {
       setState(() {
         _isCheckingBookmark = false;
       });
@@ -85,16 +84,6 @@ class _BantenDetailScreenState extends State<BantenDetailScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Silakan login terlebih dahulu'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    if (widget.bantenId == false) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Error: ID banten tidak ditemukan'),
           backgroundColor: Colors.red,
         ),
       );
@@ -157,7 +146,7 @@ class _BantenDetailScreenState extends State<BantenDetailScreen> {
     }
   }
 
-   // Widget untuk bookmark button
+  // Widget untuk bookmark button
   Widget _buildBookmarkButton() {
     if (_isCheckingBookmark) {
       return Container(
@@ -363,6 +352,39 @@ class _BantenDetailScreenState extends State<BantenDetailScreen> {
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => Navigator.of(context).pop(),
         ),
+        // ✅ ADDED: Bookmark icon di AppBar
+        actions: [
+          if (_isCheckingBookmark)
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.black,
+                ),
+              ),
+            )
+          else
+            IconButton(
+              onPressed: _isBookmarkLoading ? null : _toggleBookmark,
+              icon: _isBookmarkLoading
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.black,
+                      ),
+                    )
+                  : Icon(
+                      _isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                      color: _isBookmarked ? const Color(0xFF4CAF50) : Colors.black,
+                      size: 28,
+                    ),
+            ),
+        ],
       ),
       body: FutureBuilder<BantenModel?>(
         future: _bantenFuture,
@@ -425,7 +447,7 @@ class _BantenDetailScreenState extends State<BantenDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ADDED: Tampilkan gambar jika ada
+                // Tampilkan gambar jika ada
                 if (banten.photos.isNotEmpty)
                   Container(
                     height: 250,
@@ -479,7 +501,7 @@ class _BantenDetailScreenState extends State<BantenDetailScreen> {
                   children: [
                     Expanded(
                       child: Text(
-                                                  banten.namaBanten, // FIXED: Konsisten dengan Firebase 'name' field
+                        banten.namaBanten,
                         style: GoogleFonts.inter(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -508,7 +530,7 @@ class _BantenDetailScreenState extends State<BantenDetailScreen> {
                 ),
                 const SizedBox(height: 24),
                 
-                // ADDED: Info pembuat dan daerah
+                // Info pembuat dan daerah
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -573,12 +595,12 @@ class _BantenDetailScreenState extends State<BantenDetailScreen> {
                 // Deskripsi
                 _buildSection(
                   title: 'Deskripsi',
-                                      content: banten.description, // FIXED: Konsisten dengan Firebase 'description' field
+                  content: banten.description,
                   icon: Icons.description,
                 ),
                 const SizedBox(height: 20),
                 
-                // ADDED: Sejarah section (field terpisah)
+                // Sejarah section
                 if (banten.sejarah.isNotEmpty) ...[
                   _buildSection(
                     title: 'Sejarah',
@@ -587,9 +609,8 @@ class _BantenDetailScreenState extends State<BantenDetailScreen> {
                   ),
                   const SizedBox(height: 20),
                 ],
-          
 
-                //ADD: Isi Banten section (field terpisah)
+                // Isi Banten section
                 if (banten.isiBanten.isNotEmpty) ...[
                   _buildSection(
                     title: 'Isi Banten',
@@ -599,7 +620,7 @@ class _BantenDetailScreenState extends State<BantenDetailScreen> {
                   const SizedBox(height: 20),
                 ],
 
-                // ADDED: Cara Buat Banten section (field terpisah)
+                // Cara Buat Banten section
                 if (banten.carabuatBanten.isNotEmpty) ...[
                   _buildSection(
                     title: 'Cara Pembuatan Banten',
@@ -609,7 +630,7 @@ class _BantenDetailScreenState extends State<BantenDetailScreen> {
                   const SizedBox(height: 20),
                 ],
 
-                // ADDED: Sumber Referensi (guddenKeyword)
+                // Sumber Referensi
                 if (banten.guddenKeyword.isNotEmpty) ...[
                   _buildSection(
                     title: 'Sumber Referensi',
@@ -635,7 +656,7 @@ class _BantenDetailScreenState extends State<BantenDetailScreen> {
                           },
                           icon: const Icon(Icons.edit, color: Colors.white),
                           label: const Text(
-                            'Edit',
+                            'Sunting',
                             style: TextStyle(color: Colors.white),
                           ),
                           style: ElevatedButton.styleFrom(
@@ -673,67 +694,7 @@ class _BantenDetailScreenState extends State<BantenDetailScreen> {
           );
         },
       ),
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            // Bookmark button
-            GestureDetector(
-              onTap: _isBookmarkLoading ? null : _toggleBookmark,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: _isBookmarked ? const Color(0xFF4CAF50).withOpacity(0.1) : Colors.grey[100],
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: _isBookmarked ? const Color(0xFF4CAF50) : Colors.grey[300]!,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (_isBookmarkLoading)
-                      const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Color(0xFF4CAF50),
-                        ),
-                      )
-                    else
-                      Icon(
-                        _isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-                        color: _isBookmarked ? const Color(0xFF4CAF50) : Colors.grey[600],
-                        size: 20,
-                      ),
-                    const SizedBox(width: 8),
-                    Text(
-                      _isBookmarked ? 'Tersimpan' : 'Simpan',
-                      style: GoogleFonts.inter(
-                        color: _isBookmarked ? const Color(0xFF4CAF50) : Colors.grey[600],
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-          ],
-        ),
-      ),
+      // ✅ REMOVED: Bottom navigation bar completely
     );
   }
   
