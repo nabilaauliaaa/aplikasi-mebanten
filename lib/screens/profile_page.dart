@@ -1,3 +1,4 @@
+import 'package:apk_mebanten/screens/banten_detail_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -274,21 +275,26 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildBookmarkItem(Map<String, dynamic> banten) {
-    // Debug: print data yang ada
-    print('Building bookmark item with data: $banten');
-    
-    // Fetching data
-    String bantenName = banten['namaBanten'] ?? 'Nama Banten';
+    String namaBanten = banten['namaBanten'] ?? 'namaBanten';
     String bantenDaerah = banten['daerah'] ?? 'Daerah';
+
     List<dynamic>? photos = banten['photos'];
     String? imageUrl;
-    
-    // Handle photos array
+
     if (photos != null && photos.isNotEmpty) {
       imageUrl = photos[0].toString();
     }
-    
-    return Container(
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => BantenDetailScreen(bantenId: banten['id']),
+          ),
+        );
+      },
+      child: Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -356,7 +362,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    bantenName,
+                    namaBanten,
                     style: GoogleFonts.inter(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -381,14 +387,7 @@ class _ProfilePageState extends State<ProfilePage> {
             // Remove button
             IconButton(
               onPressed: () {
-                String bantenId = banten['id'] ?? '';
-                if (bantenId.isNotEmpty) {
-                  _showRemoveBookmarkDialog(bantenId, bantenName);
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Error: Bookmark ID tidak ditemukan')),
-                  );
-                }
+                _showRemoveBookmarkDialog(banten['id'], banten['namaBanten'] ?? 'Banten');
               },
               icon: Icon(
                 Icons.bookmark_remove,
@@ -399,6 +398,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ],
         ),
       ),
+    )
     );
   }
 
