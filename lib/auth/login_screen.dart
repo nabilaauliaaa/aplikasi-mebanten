@@ -189,7 +189,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             controller: _emailController,
                             style: GoogleFonts.inter(),
                             decoration: InputDecoration(
-                              hintText: 'Email Address',
+                              hintText: 'Alamat Email',
                               hintStyle: GoogleFonts.inter(color: Colors.grey[500]),
                               filled: true,
                               fillColor: Colors.grey[100],
@@ -211,7 +211,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             style: GoogleFonts.inter(),
                             obscureText: !_isPasswordVisible,
                             decoration: InputDecoration(
-                              hintText: 'Password',
+                              hintText: 'Kata Sandi',
                               hintStyle: GoogleFonts.inter(color: Colors.grey[500]),
                               filled: true,
                               fillColor: Colors.grey[100],
@@ -242,10 +242,11 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: TextButton(
                             onPressed: () {},
                             child: Text(
-                              'Forgot password?',
+                              'Lupa Password?',
                               style: GoogleFonts.inter(
                                 color: const Color(0xFF3FAE82),
                                 fontSize: screenHeight * 0.018,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
@@ -289,7 +290,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                   )
                                 : Text(
-                                    'Login',
+                                    'Masuk',
                                     style: GoogleFonts.inter(
                                       fontSize: screenHeight * 0.022,
                                       fontWeight: FontWeight.w600,
@@ -309,7 +310,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 fontSize: screenHeight * 0.018,
                               ),
                               children: [
-                                const TextSpan(text: "Don't have an account yet? "),
+                                const TextSpan(text: "Belum memiliki akun? "),
                                 WidgetSpan(
                                   child: GestureDetector(
                                     onTap: () {
@@ -319,7 +320,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                       );
                                     },
                                     child: Text(
-                                      'Register here',
+                                      'Daftar di sini',
                                       style: GoogleFonts.inter(
                                         color: const Color(0xFF3FAE82),
                                         fontSize: 20,
@@ -337,7 +338,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         // Continue with - center aligned
                         Center(
                           child: Text(
-                            'Or continue with',
+                            'Atau lanjutkan dengan',
                             style: GoogleFonts.inter(
                               color: Colors.grey[600],
                               fontSize: screenHeight * 0.018,

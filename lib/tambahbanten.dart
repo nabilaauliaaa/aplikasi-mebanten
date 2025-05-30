@@ -5,7 +5,8 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:permission_handler/permission_handler.dart';  // ← NEW: Permission handling
+import 'package:permission_handler/permission_handler.dart';
+import 'package:http/http.dart' as http;
 import '../auth/login_screen.dart';
 import './screens/profile_page.dart';
 import './screens/home_screen.dart';
@@ -35,11 +36,11 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final ImagePicker _picker = ImagePicker();
   
-  // ENHANCED: Support camera + gallery + link (but still single image)
+  // Image handling
   File? _selectedImage;
   bool _isUploading = false;
   String? _previewImageUrl;
-  String _imageSource = ''; // Track source: "camera", "gallery", "link"
+  String _imageSource = '';
 
   @override
   void initState() {
@@ -87,35 +88,31 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Tidak dapat membuka URL')),
-          );
+          _showErrorMessage('Tidak dapat membuka URL');
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error membuka URL: $e')),
-        );
+        _showErrorMessage('Error membuka URL: $e');
       }
     }
   }
   
-  // ENHANCED: Show image source selection dialog (Camera + Gallery only)
+  // Show image source selection dialog
   void _showImageSourceDialog() {
     print('🔍 DEBUG: Image source dialog opened');
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Pilih Sumber Gambar'),
+          title: const Text('Pilih Sumber Gambar'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: Icon(Icons.camera_alt, color: Color(0xFF4CAF50)),
-                title: Text('Ambil Foto'),
-                subtitle: Text('Gunakan kamera'),
+                leading: const Icon(Icons.camera_alt, color: Color(0xFF53B493)),
+                title: const Text('Ambil Foto'),
+                subtitle: const Text('Gunakan kamera'),
                 onTap: () {
                   print('🔍 DEBUG: Camera option selected');
                   Navigator.pop(context);
@@ -123,9 +120,9 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
                 },
               ),
               ListTile(
-                leading: Icon(Icons.photo_library, color: Color(0xFF4CAF50)),
-                title: Text('Pilih dari Galeri'),
-                subtitle: Text('Pilih foto yang ada'),
+                leading: const Icon(Icons.photo_library, color: Color(0xFF53B493)),
+                title: const Text('Pilih dari Galeri'),
+                subtitle: const Text('Pilih foto yang ada'),
                 onTap: () {
                   print('🔍 DEBUG: Gallery option selected');
                   Navigator.pop(context);
@@ -139,191 +136,126 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
     );
   }
 
-  // NEW: Check and request permissions
-  Future<void> _checkPermissions() async {
-    print('🔍 DEBUG: Checking permissions...');
-    
+  // Check and request permissions
+  Future<bool> _checkAndRequestPermissions(ImageSource source) async {
     try {
-      // Check storage permission
-      final storageStatus = await Permission.storage.status;
-      print('🔍 DEBUG: Storage permission status: $storageStatus');
+      print('🔍 DEBUG: Checking permissions for $source');
       
-      // Check camera permission  
-      final cameraStatus = await Permission.camera.status;
-      print('🔍 DEBUG: Camera permission status: $cameraStatus');
-      
-      // Check photos permission (for iOS and Android 13+)
-      final photosStatus = await Permission.photos.status;
-      print('🔍 DEBUG: Photos permission status: $photosStatus');
-      
-      // Request storage permission if not granted
-      if (!storageStatus.isGranted) {
-        print('🔍 DEBUG: Requesting storage permission...');
-        final result = await Permission.storage.request();
-        print('🔍 DEBUG: Storage permission request result: $result');
+      if (source == ImageSource.camera) {
+        var cameraStatus = await Permission.camera.status;
+        print('🔍 DEBUG: Camera permission status: $cameraStatus');
         
-        if (!result.isGranted) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Storage permission diperlukan untuk memilih gambar'),
-                backgroundColor: Colors.red,
-              ),
-            );
+        if (!cameraStatus.isGranted) {
+          cameraStatus = await Permission.camera.request();
+          if (!cameraStatus.isGranted) {
+            _showErrorMessage('Permission kamera diperlukan untuk mengambil foto');
+            return false;
           }
         }
       }
       
-      // Request camera permission if not granted
-      if (!cameraStatus.isGranted) {
-        print('🔍 DEBUG: Requesting camera permission...');
-        final result = await Permission.camera.request();
-        print('🔍 DEBUG: Camera permission request result: $result');
+      // For gallery access
+      if (Platform.isAndroid) {
+        // Android 13+ uses photos permission
+        var photosStatus = await Permission.photos.status;
+        print('🔍 DEBUG: Photos permission status: $photosStatus');
         
-        if (!result.isGranted) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Camera permission diperlukan untuk mengambil foto'),
-                backgroundColor: Colors.red,
-              ),
-            );
+        if (!photosStatus.isGranted) {
+          photosStatus = await Permission.photos.request();
+          if (!photosStatus.isGranted) {
+            // Fallback to storage permission for older Android
+            var storageStatus = await Permission.storage.status;
+            if (!storageStatus.isGranted) {
+              storageStatus = await Permission.storage.request();
+              if (!storageStatus.isGranted) {
+                _showErrorMessage('Permission storage diperlukan untuk memilih gambar');
+                return false;
+              }
+            }
+          }
+        }
+      } else if (Platform.isIOS) {
+        var photosStatus = await Permission.photos.status;
+        if (!photosStatus.isGranted) {
+          photosStatus = await Permission.photos.request();
+          if (!photosStatus.isGranted) {
+            _showErrorMessage('Permission photos diperlukan untuk memilih gambar');
+            return false;
           }
         }
       }
-
-      // Request photos permission if not granted (for Android 13+)
-      if (!photosStatus.isGranted) {
-        print('🔍 DEBUG: Requesting photos permission...');
-        final result = await Permission.photos.request();
-        print('🔍 DEBUG: Photos permission request result: $result');
-      }
       
-      print('✅ DEBUG: Permission check completed');
+      print('✅ DEBUG: All permissions granted');
+      return true;
       
     } catch (e) {
       print('💥 DEBUG: Error checking permissions: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error checking permissions: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      _showErrorMessage('Error checking permissions: $e');
+      return false;
     }
   }
   
-  // ENHANCED: Function to pick image (now supports camera + gallery) - WITH FULL DEBUG
+  // Enhanced image picker with full debugging
   Future<void> _pickImage(ImageSource source) async {
-    // NEW: Check permissions first
-    await _checkPermissions();
-    
     try {
       print('🔍 DEBUG: Starting image pick from $source');
-      print('🔍 DEBUG: ImagePicker instance: ${_picker.runtimeType}');
-      print('🔍 DEBUG: Current platform: ${Theme.of(context).platform}');
+      
+      // Check permissions first
+      bool hasPermission = await _checkAndRequestPermissions(source);
+      if (!hasPermission) {
+        print('❌ DEBUG: Permissions not granted');
+        return;
+      }
       
       final XFile? image = await _picker.pickImage(
-        source: source, // ← ENHANCED: Can be camera or gallery
+        source: source,
         maxWidth: 1920,
         maxHeight: 1080,
         imageQuality: 80,
       );
       
-      print('🔍 DEBUG: Image picker completed');
-      print('🔍 DEBUG: Selected image: ${image?.path}');
-      print('🔍 DEBUG: Image name: ${image?.name}');
-      print('🔍 DEBUG: Image mimeType: ${image?.mimeType}');
+      print('🔍 DEBUG: Image picker result: ${image?.path}');
       
       if (image != null) {
         final file = File(image.path);
-        print('🔍 DEBUG: File created from path: ${image.path}');
-        print('🔍 DEBUG: File exists: ${file.existsSync()}');
         
-        if (file.existsSync()) {
-          final fileSize = await file.length();
-          print('🔍 DEBUG: File size: $fileSize bytes (${(fileSize / 1024).toStringAsFixed(2)} KB)');
-          
-          // Test reading file to make sure it's accessible
-          try {
-            final bytes = await file.readAsBytes();
-            print('🔍 DEBUG: File readable, byte length: ${bytes.length}');
-          } catch (e) {
-            print('❌ DEBUG: File not readable: $e');
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('File tidak dapat dibaca: $e'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
-            return;
-          }
+        // Verify file exists and is readable
+        if (!await file.exists()) {
+          print('❌ DEBUG: File does not exist at path: ${image.path}');
+          _showErrorMessage('File gambar tidak ditemukan');
+          return;
+        }
+        
+        try {
+          final bytes = await file.readAsBytes();
+          print('✅ DEBUG: File readable, size: ${bytes.length} bytes');
           
           setState(() {
-            _selectedImage = File(image.path);
+            _selectedImage = file;
             _previewImageUrl = null;
-            _imageLinkController.clear(); // Clear image link when file selected
+            _imageLinkController.clear();
             _imageSource = source == ImageSource.camera ? 'camera' : 'gallery';
           });
           
           print('✅ DEBUG: State updated successfully');
-          print('🔍 DEBUG: _selectedImage is null: ${_selectedImage == null}');
-          print('🔍 DEBUG: _selectedImage path: ${_selectedImage?.path}');
-          print('🔍 DEBUG: _imageSource: $_imageSource');
+          _showSuccessMessage('Gambar berhasil dipilih dari $_imageSource');
           
-          // Success feedback
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Gambar berhasil dipilih dari $_imageSource'),
-                backgroundColor: Color(0xFF4CAF50),
-                duration: Duration(seconds: 2),
-              ),
-            );
-          }
-        } else {
-          print('❌ DEBUG: File does not exist at the specified path');
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('File gambar tidak ditemukan di path: ${image.path}'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
+        } catch (e) {
+          print('❌ DEBUG: File not readable: $e');
+          _showErrorMessage('File gambar tidak dapat dibaca: $e');
         }
       } else {
-        print('❌ DEBUG: No image selected (user cancelled or error)');
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Tidak ada gambar yang dipilih'),
-              backgroundColor: Colors.orange,
-            ),
-          );
-        }
+        print('ℹ️ DEBUG: No image selected');
+        _showInfoMessage('Tidak ada gambar yang dipilih');
       }
     } catch (e, stackTrace) {
-      print('💥 DEBUG: Error picking image: $e');
-      print('💥 DEBUG: Error type: ${e.runtimeType}');
+      print('💥 DEBUG: Error in _pickImage: $e');
       print('💥 DEBUG: Stack trace: $stackTrace');
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error picking image: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            duration: Duration(seconds: 4),
-          ),
-        );
-      }
+      _showErrorMessage('Error memilih gambar: $e');
     }
   }
   
-  // ENHANCED: Function to preview link image - WITH DEBUG
+  // Preview link image
   void _previewLinkImage() {
     final url = _imageLinkController.text.trim();
     print('🔍 DEBUG: Preview link called with URL: $url');
@@ -331,12 +263,10 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
     if (url.isNotEmpty) {
       setState(() {
         _previewImageUrl = url;
-        _selectedImage = null; // Clear file when link is used
+        _selectedImage = null;
         _imageSource = 'link';
       });
       print('✅ DEBUG: Link preview set successfully');
-      print('🔍 DEBUG: _previewImageUrl: $_previewImageUrl');
-      print('🔍 DEBUG: _imageSource: $_imageSource');
     } else {
       setState(() {
         _previewImageUrl = null;
@@ -345,89 +275,145 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
       print('🔍 DEBUG: Link preview cleared');
     }
   }
+
+  // Validate image URL format
+  bool _isValidImageUrl(String url) {
+    try {
+      final uri = Uri.parse(url);
+      
+      if (!uri.hasScheme) return false;
+      if (!['http', 'https'].contains(uri.scheme.toLowerCase())) return false;
+      
+      // For Firebase Storage URLs, check the pattern
+      if (url.contains('firebasestorage.googleapis.com')) {
+        return url.contains('/o/') && url.contains('?alt=media');
+      }
+      
+      return true;
+      
+    } catch (e) {
+      print('💥 DEBUG: Invalid URL format: $e');
+      return false;
+    }
+  }
+
+  // Verify uploaded image is accessible
+  Future<void> _verifyUploadedImage(String url) async {
+    try {
+      print('🔍 DEBUG: Verifying uploaded image accessibility...');
+      
+      final response = await http.head(Uri.parse(url));
+      print('🔍 DEBUG: Image verification response: ${response.statusCode}');
+      
+      if (response.statusCode == 200) {
+        print('✅ DEBUG: Image is accessible at: $url');
+        final contentType = response.headers['content-type'];
+        print('🔍 DEBUG: Content-Type: $contentType');
+      } else {
+        print('❌ DEBUG: Image not accessible, status: ${response.statusCode}');
+      }
+      
+    } catch (e) {
+      print('💥 DEBUG: Error verifying image: $e');
+    }
+  }
   
-  // ENHANCED: Function to upload image and get URL - WITH FULL DEBUG
+  // Enhanced upload with verification
   Future<String?> _uploadImage() async {
     print('🔍 DEBUG: Starting upload process');
-    print('🔍 DEBUG: _selectedImage is null: ${_selectedImage == null}');
-    print('🔍 DEBUG: _imageLinkController.text: ${_imageLinkController.text}');
-    print('🔍 DEBUG: _previewImageUrl: $_previewImageUrl');
+    print('🔍 DEBUG: _selectedImage: ${_selectedImage?.path}');
+    print('🔍 DEBUG: _imageLinkController.text: "${_imageLinkController.text}"');
     
     // If using link, return the link directly
     if (_selectedImage == null && _imageLinkController.text.isNotEmpty) {
-      print('✅ DEBUG: Using link URL: ${_imageLinkController.text.trim()}');
-      return _imageLinkController.text.trim();
+      final linkUrl = _imageLinkController.text.trim();
+      print('✅ DEBUG: Using link URL: $linkUrl');
+      return linkUrl;
     }
     
     // If no file selected, return null
     if (_selectedImage == null) {
-      print('❌ DEBUG: No image to upload');
+      print('ℹ️ DEBUG: No image to upload');
       return null;
     }
     
     try {
-      print('🔍 DEBUG: Uploading file to Firebase Storage');
-      print('🔍 DEBUG: File path: ${_selectedImage!.path}');
-      print('🔍 DEBUG: File exists before upload: ${_selectedImage!.existsSync()}');
-      
-      if (!_selectedImage!.existsSync()) {
-        print('❌ DEBUG: File does not exist, cannot upload');
+      // Verify file still exists before upload
+      if (!await _selectedImage!.exists()) {
+        print('❌ DEBUG: File no longer exists at upload time');
+        _showErrorMessage('File gambar sudah tidak ada');
         return null;
       }
       
       final fileSize = await _selectedImage!.length();
-      print('🔍 DEBUG: File size before upload: $fileSize bytes');
+      print('🔍 DEBUG: File size: $fileSize bytes (${(fileSize / 1024 / 1024).toStringAsFixed(2)} MB)');
       
-      // Test file readability before upload
-      try {
-        final bytes = await _selectedImage!.readAsBytes();
-        print('🔍 DEBUG: File readable for upload, byte length: ${bytes.length}');
-      } catch (e) {
-        print('❌ DEBUG: File not readable for upload: $e');
+      if (fileSize == 0) {
+        print('❌ DEBUG: File is empty');
+        _showErrorMessage('File gambar kosong');
         return null;
       }
       
-      final path = 'banten/${DateTime.now().millisecondsSinceEpoch}_image.jpg';
-      print('🔍 DEBUG: Firebase Storage path: $path');
+      if (fileSize > 10 * 1024 * 1024) {
+        _showErrorMessage('File terlalu besar (maksimal 10MB)');
+        return null;
+      }
       
+      // Create unique path with proper extension
+      final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+      final String userId = _auth.currentUser!.uid;
+      final String fileName = 'banten_${timestamp}_$userId.jpg';
+      final String path = 'banten_images/$fileName';
+      
+      print('🔍 DEBUG: Uploading to path: $path');
+      
+      // Create storage reference
       final ref = _storage.ref().child(path);
-      print('🔍 DEBUG: Storage reference created');
       
-      final uploadTask = ref.putFile(_selectedImage!);
-      print('🔍 DEBUG: Upload task started');
+      // Upload with proper metadata
+      final uploadTask = ref.putFile(
+        _selectedImage!,
+        SettableMetadata(
+          contentType: 'image/jpeg',
+          cacheControl: 'max-age=3600',
+          customMetadata: {
+            'uploaded_by': userId,
+            'upload_time': DateTime.now().toIso8601String(),
+            'original_size': fileSize.toString(),
+          },
+        ),
+      );
       
       // Monitor upload progress
       uploadTask.snapshotEvents.listen((snapshot) {
         final progress = snapshot.bytesTransferred / snapshot.totalBytes;
-        print('🔍 DEBUG: Upload progress: ${(progress * 100).toStringAsFixed(1)}% (${snapshot.bytesTransferred}/${snapshot.totalBytes} bytes)');
+        print('📊 DEBUG: Upload progress: ${(progress * 100).toStringAsFixed(1)}%');
       });
       
-      final snapshot = await uploadTask.whenComplete(() {
-        print('🔍 DEBUG: Upload completed');
-      });
+      // Wait for upload completion
+      final snapshot = await uploadTask;
+      print('✅ DEBUG: Upload completed successfully');
       
-      final url = await snapshot.ref.getDownloadURL();
-      print('✅ DEBUG: Download URL obtained: $url');
+      // Get download URL
+      final downloadUrl = await snapshot.ref.getDownloadURL();
+      print('✅ DEBUG: Download URL obtained: $downloadUrl');
       
-      return url;
+      // Verify the URL is accessible
+      await _verifyUploadedImage(downloadUrl);
+      
+      return downloadUrl;
+      
     } catch (e, stackTrace) {
-      print('💥 DEBUG: Error uploading image: $e');
+      print('💥 DEBUG: Upload error: $e');
       print('💥 DEBUG: Upload error type: ${e.runtimeType}');
       print('💥 DEBUG: Upload stack trace: $stackTrace');
       
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error uploading image: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      _showErrorMessage('Gagal upload gambar: ${e.toString()}');
       return null;
     }
   }
   
-  // ENHANCED: Function to save data to Firestore
+  // Enhanced save method with validation
   Future<void> _saveBantenData() async {
     final User? currentUser = _auth.currentUser;
     if (currentUser == null) {
@@ -451,35 +437,29 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
     try {
       print('🔍 DEBUG: Starting save process');
       
-      // 1. Get user data
+      // Get user data
       DocumentSnapshot userDoc = await _firestore.collection('users').doc(currentUser.uid).get();
       Map<String, dynamic>? userData = userDoc.exists ? userDoc.data() as Map<String, dynamic> : null;
-      print('🔍 DEBUG: User data retrieved');
       
-      // 2. Upload image if selected or use image link
-      String? imageUrl;
-      if (_selectedImage != null) {
-        print('🔍 DEBUG: Uploading file image');
-        imageUrl = await _uploadImage();
-      } else if (_previewImageUrl != null) {
-        print('🔍 DEBUG: Using preview URL');
-        imageUrl = _previewImageUrl;
-      } else if (_imageLinkController.text.isNotEmpty) {
-        print('🔍 DEBUG: Using link field URL');
-        imageUrl = _imageLinkController.text.trim();
-      }
+      // Upload image and get URL
+      String? imageUrl = await _uploadImage();
+      print('🔍 DEBUG: Upload result - imageUrl: $imageUrl');
       
-      print('🔍 DEBUG: Final image URL: $imageUrl');
-      
-      // 3. Create photos array
+      // Create photos array - IMPORTANT: Only add valid URLs
       List<String> photos = [];
       if (imageUrl != null && imageUrl.isNotEmpty) {
-        photos.add(imageUrl);
+        if (_isValidImageUrl(imageUrl)) {
+          photos.add(imageUrl);
+          print('✅ DEBUG: Valid image URL added to photos: $imageUrl');
+        } else {
+          print('❌ DEBUG: Invalid image URL format: $imageUrl');
+        }
       }
-      print('🔍 DEBUG: Photos array: $photos');
       
-      // 4. Save data to Firestore
-      await _firestore.collection('bantens').add({
+      print('🔍 DEBUG: Final photos array: $photos');
+      
+      // Prepare document data
+      final docData = {
         'userId': currentUser.uid,
         'namaBanten': _namaBantenController.text.trim(),          
         'description': _descriptionController.text.trim(),  
@@ -488,36 +468,306 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
         'isiBanten': _isiBantenController.text.trim(),
         'carabuatBanten': _carabuatBantenController.text.trim(),             
         'guddenKeyword': _sumberReferensiController.text.trim(),
-        'photos': photos,
+        'photos': photos, // Critical field for image display
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
         'userName': userData?['name'] ?? currentUser.displayName ?? 'Anonymous',
         'userEmail': currentUser.email,
         'username': userData?['username'] ?? '',
+      };
+      
+      print('🔍 DEBUG: Document data to save:');
+      docData.forEach((key, value) {
+        print('  $key: $value');
       });
       
-      print('✅ DEBUG: Data saved to Firestore successfully');
+      // Save to Firestore
+      DocumentReference docRef = await _firestore.collection('bantens').add(docData);
+      print('✅ DEBUG: Document saved with ID: ${docRef.id}');
       
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Banten berhasil disimpan'),
-          backgroundColor: Color(0xFF4CAF50),
-        ),
-      );
+      // Verify the saved document
+      DocumentSnapshot savedDoc = await docRef.get();
+      if (savedDoc.exists) {
+        Map<String, dynamic> savedData = savedDoc.data() as Map<String, dynamic>;
+        print('✅ DEBUG: Verified saved photos: ${savedData['photos']}');
+        print('✅ DEBUG: Photos array length: ${(savedData['photos'] as List).length}');
+      }
       
+      _showSuccessMessage('Banten berhasil disimpan');
       Navigator.of(context).pop();
+      
     } catch (e, stackTrace) {
       print('💥 DEBUG: Error saving data: $e');
       print('💥 DEBUG: Save error type: ${e.runtimeType}');
       print('💥 DEBUG: Save stack trace: $stackTrace');
       
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
-      );
+      _showErrorMessage('Error: ${e.toString()}');
     } finally {
       setState(() {
         _isUploading = false;
       });
+    }
+  }
+
+  // Remove image from state
+  void _removeImage() {
+    print('🔍 DEBUG: Removing image');
+    setState(() {
+      _selectedImage = null;
+      _previewImageUrl = null;
+      _imageLinkController.clear();
+      _imageSource = '';
+    });
+    print('✅ DEBUG: Image removed from state');
+  }
+
+  // Image preview widget
+  Widget _buildImagePreview() {
+    return GestureDetector(
+      onTap: () {
+        print('🔍 DEBUG: Image area tapped');
+        _showImageSourceDialog();
+      },
+      child: Container(
+        height: 200,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: const Color(0xFFE3F2FD),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: _buildImageContent(),
+      ),
+    );
+  }
+
+  Widget _buildImageContent() {
+    // Show selected file image
+    if (_selectedImage != null) {
+      return Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: FutureBuilder<bool>(
+              future: _selectedImage!.exists(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return _buildLoadingIndicator();
+                }
+                
+                if (snapshot.hasError || !(snapshot.data ?? false)) {
+                  print('❌ DEBUG: File check failed: ${snapshot.error}');
+                  return _buildErrorIndicator('File tidak ditemukan');
+                }
+                
+                return Image.file(
+                  _selectedImage!,
+                  width: double.infinity,
+                  height: 200,
+                  fit: BoxFit.cover,
+                  frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+                    if (frame == null) {
+                      return _buildLoadingIndicator();
+                    }
+                    return child;
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    print('💥 DEBUG: Image.file error: $error');
+                    return _buildErrorIndicator('Gagal memuat gambar');
+                  },
+                );
+              },
+            ),
+          ),
+          _buildImageOverlay(),
+        ],
+      );
+    }
+    
+    // Show preview from URL
+    if (_previewImageUrl != null && _previewImageUrl!.isNotEmpty) {
+      return Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.network(
+              _previewImageUrl!,
+              width: double.infinity,
+              height: 200,
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return _buildLoadingIndicator();
+              },
+              errorBuilder: (context, error, stackTrace) {
+                print('💥 DEBUG: Network image error: $error');
+                return _buildErrorIndicator('Gagal memuat gambar dari URL');
+              },
+            ),
+          ),
+          _buildImageOverlay(isLink: true),
+        ],
+      );
+    }
+    
+    // Show placeholder
+    return _buildPlaceholder();
+  }
+
+  Widget _buildLoadingIndicator() {
+    return Container(
+      color: Colors.grey[200],
+      child: const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(color: Color(0xFF53B493)),
+            SizedBox(height: 8),
+            Text('Memuat gambar...'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorIndicator(String message) {
+    return Container(
+      color: Colors.red[100],
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error, color: Colors.red, size: 40),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Ketuk untuk coba lagi',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImageOverlay({bool isLink = false}) {
+    return Stack(
+      children: [
+        // Source indicator
+        Positioned(
+          top: 8,
+          left: 8,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.black54,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              isLink ? 'LINK' : _imageSource.toUpperCase(),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+        // Remove button
+        Positioned(
+          top: 8,
+          right: 8,
+          child: GestureDetector(
+            onTap: _removeImage,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.close,
+                color: Colors.white,
+                size: 16,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPlaceholder() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.image_outlined,
+            size: 50,
+            color: Color(0xFF64B5F6),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Ketuk untuk menambahkan gambar',
+            style: TextStyle(
+              color: Color(0xFF64B5F6),
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          SizedBox(height: 4),
+          Text(
+            'Pilih dari kamera atau galeri',
+            style: TextStyle(
+              color: Colors.grey,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper methods for showing messages
+  void _showSuccessMessage(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: const Color(0xFF53B493),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  void _showErrorMessage(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  void _showInfoMessage(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.orange,
+          duration: const Duration(seconds: 2),
+        ),
+      );
     }
   }
 
@@ -527,7 +777,7 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
       return const Scaffold(
         body: Center(
           child: CircularProgressIndicator(
-            color: Color(0xFF4CAF50),
+            color: Color(0xFF53B493),
           ),
         ),
       );
@@ -682,247 +932,11 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
               ),
               const SizedBox(height: 16),
               
-              // ENHANCED: Image picker area with 3 sources support - WITH DEBUG UI
-              GestureDetector(
-                onTap: () {
-                  print('🔍 DEBUG: Image area tapped');
-                  _showImageSourceDialog();
-                },
-                child: Container(
-                  height: 200,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE3F2FD),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade300),
-                  ),
-                  child: _selectedImage != null
-                      ? Stack(
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: Image.file(
-                                _selectedImage!,
-                                width: double.infinity,
-                                height: 200,
-                                fit: BoxFit.cover,
-                                frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-                                  if (frame == null) {
-                                    print('🔍 DEBUG: Image frame is null, still loading...');
-                                    return Container(
-                                      color: Colors.grey[200],
-                                      child: Center(
-                                        child: Column(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            CircularProgressIndicator(color: Color(0xFF4CAF50)),
-                                            SizedBox(height: 8),
-                                            Text('Loading image...'),
-                                          ],
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                  print('✅ DEBUG: Image frame loaded: $frame');
-                                  return child;
-                                },
-                                errorBuilder: (context, error, stackTrace) {
-                                  print('💥 DEBUG: Image display error: $error');
-                                  print('💥 DEBUG: Image error type: ${error.runtimeType}');
-                                  print('💥 DEBUG: Image error stack: $stackTrace');
-                                  return Container(
-                                    color: Colors.red[100],
-                                    child: Center(
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Icon(Icons.error, color: Colors.red, size: 40),
-                                          SizedBox(height: 8),
-                                          Text('Image Error', style: TextStyle(fontWeight: FontWeight.bold)),
-                                          SizedBox(height: 4),
-                                          Text('Tap to retry', style: TextStyle(fontSize: 12)),
-                                          SizedBox(height: 4),
-                                          Text(
-                                            'Error: ${error.toString()}',
-                                            style: TextStyle(fontSize: 10, color: Colors.red),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                            // ENHANCED: Source indicator
-                            Positioned(
-                              top: 8,
-                              left: 8,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.black54,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  _imageSource.toUpperCase(),
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            Positioned(
-                              top: 8,
-                              right: 8,
-                              child: GestureDetector(
-                                onTap: () {
-                                  print('🔍 DEBUG: Remove image button tapped');
-                                  setState(() {
-                                    _selectedImage = null;
-                                    _imageSource = '';
-                                  });
-                                  print('✅ DEBUG: Image removed from state');
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.all(4),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black54,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(
-                                    Icons.close,
-                                    color: Colors.white,
-                                    size: 16,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        )
-                      : _previewImageUrl != null
-                          ? Stack(
-                              children: [
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: Image.network(
-                                    _previewImageUrl!,
-                                    width: double.infinity,
-                                    height: 200,
-                                    fit: BoxFit.cover,
-                                    loadingBuilder: (context, child, loadingProgress) {
-                                      if (loadingProgress == null) {
-                                        print('✅ DEBUG: Network image loaded successfully');
-                                        return child;
-                                      }
-                                      print('🔍 DEBUG: Loading network image... ${loadingProgress.cumulativeBytesLoaded}/${loadingProgress.expectedTotalBytes}');
-                                      return const Center(
-                                        child: CircularProgressIndicator(
-                                          color: Color(0xFF4CAF50),
-                                        ),
-                                      );
-                                    },
-                                    errorBuilder: (context, error, stackTrace) {
-                                      print('💥 DEBUG: Network image error: $error');
-                                      return const Center(
-                                        child: Column(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Icon(Icons.error, color: Colors.red),
-                                            SizedBox(height: 8),
-                                            Text('Gagal memuat gambar', 
-                                                style: TextStyle(color: Colors.red)),
-                                          ],
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
-                                // ENHANCED: Source indicator for link
-                                Positioned(
-                                  top: 8,
-                                  left: 8,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: Colors.black54,
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: const Text(
-                                      'LINK',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                Positioned(
-                                  top: 8,
-                                  right: 8,
-                                  child: GestureDetector(
-                                    onTap: () {
-                                      print('🔍 DEBUG: Remove link image button tapped');
-                                      setState(() {
-                                        _previewImageUrl = null;
-                                        _imageLinkController.clear();
-                                        _imageSource = '';
-                                      });
-                                      print('✅ DEBUG: Link image removed from state');
-                                    },
-                                    child: Container(
-                                      padding: const EdgeInsets.all(4),
-                                      decoration: BoxDecoration(
-                                        color: Colors.black54,
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: const Icon(
-                                        Icons.close,
-                                        color: Colors.white,
-                                        size: 16,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            )
-                          : const Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.image_outlined,
-                                    size: 50,
-                                    color: Color(0xFF64B5F6),
-                                  ),
-                                  SizedBox(height: 8),
-                                  Text(
-                                    'Ketuk untuk menambahkan gambar',
-                                    style: TextStyle(
-                                      color: Color(0xFF64B5F6),
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                  SizedBox(height: 4),
-                                  Text(
-                                    'Pilih dari kamera atau galeri',
-                                    style: TextStyle(
-                                      color: Colors.grey,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                ),
-              ),
+              // Enhanced Image picker area
+              _buildImagePreview(),
               const SizedBox(height: 16),
               
-              // KEPT: Original image link field (for direct paste)
+              // Image link field (for direct paste)
               _buildTextField(
                 controller: _imageLinkController,
                 hintText: 'Salin tautan gambar (opsional)',
@@ -949,7 +963,7 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
                   child: ElevatedButton(
                     onPressed: _isUploading ? null : _saveBantenData,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF86C0AC),
+                      backgroundColor: const Color(0xFF53B493),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(5),
                       ),
@@ -994,7 +1008,7 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
         child: BottomNavigationBar(
           type: BottomNavigationBarType.fixed,
           currentIndex: 1, // Add tab active
-          selectedItemColor: const Color(0xFF4CAF50),
+          selectedItemColor: const Color(0xFF53B493),
           unselectedItemColor: Colors.grey[400],
           backgroundColor: Colors.transparent,
           elevation: 0,
@@ -1030,16 +1044,16 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
           items: const [
             BottomNavigationBarItem(
               icon: Icon(Icons.explore_outlined, size: 24),
-              label: 'Explore',
+              label: 'Beranda',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.add, size: 24),
               activeIcon: Icon(Icons.add, size: 24),
-              label: 'Add',
+              label: 'Tambah Banten',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.person_outline, size: 24),
-              label: 'Profile',
+              label: 'Profil',
             ),
           ],
         ),
@@ -1076,7 +1090,7 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF4CAF50), width: 2),
+          borderSide: const BorderSide(color: Color(0xFF53B493), width: 2),
         ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16, 

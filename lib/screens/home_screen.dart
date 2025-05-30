@@ -141,7 +141,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(
                       child: CircularProgressIndicator(
-                        color: Color(0xFF4CAF50),
+                        color: Color(0xFF53B493),
                         strokeWidth: 2,
                       ),
                     );
@@ -180,7 +180,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               setState(() {});
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF4CAF50),
+                              backgroundColor: const Color(0xFF53B493),
                               elevation: 0,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -246,7 +246,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: BottomNavigationBar(
           type: BottomNavigationBarType.fixed,
           currentIndex: 0, // Explore tab active
-          selectedItemColor: const Color.fromARGB(255, 131, 204, 134),
+          selectedItemColor: const Color.fromARGB(255, 83, 180, 147),
           unselectedItemColor: Colors.grey[400],
           backgroundColor: Colors.transparent,
           elevation: 0,
@@ -283,15 +283,15 @@ class _HomeScreenState extends State<HomeScreen> {
             BottomNavigationBarItem(
               icon: Icon(Icons.explore_outlined, size: 24),
               activeIcon: Icon(Icons.explore, size: 24),
-              label: 'Explore',
+              label: 'Beranda',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.add, size: 24),
-              label: 'Add',
+              label: 'Tambah Banten',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.person_outline, size: 24),
-              label: 'Profile',
+              label: 'Profil',
             ),
           ],
         ),
@@ -459,7 +459,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4CAF50),
+                backgroundColor: const Color(0xFF53B493),
                 elevation: 0,
                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                 shape: RoundedRectangleBorder(

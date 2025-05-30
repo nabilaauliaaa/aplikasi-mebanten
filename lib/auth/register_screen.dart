@@ -39,7 +39,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     // Validate passwords match
     if (_passwordController.text != _confirmPasswordController.text) {
       setState(() {
-        _errorMessage = 'Passwords do not match';
+        _errorMessage = 'Kata sandi tidak cocok. Silakan coba lagi.';
       });
       return;
     }
@@ -177,7 +177,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   controller: _nameController,
                   style: GoogleFonts.inter(),
                   decoration: InputDecoration(
-                    hintText: 'Input your name',
+                    hintText: 'Masukkan nama',
                     hintStyle: GoogleFonts.inter(color: Colors.grey[400]),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -214,7 +214,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   style: GoogleFonts.inter(),
                   keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
-                    hintText: 'Input your email',
+                    hintText: 'Masukkan email',
                     hintStyle: GoogleFonts.inter(color: Colors.grey[400]),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -236,7 +236,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               
               // Password field
               Text(
-                'Password',
+                'Kata Sandi',
                 style: GoogleFonts.inter(
                   fontSize: screenHeight * 0.018,
                   fontWeight: FontWeight.w500,
@@ -251,7 +251,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   style: GoogleFonts.inter(),
                   obscureText: !_isPasswordVisible,
                   decoration: InputDecoration(
-                    hintText: 'Create a password',
+                    hintText: 'Buat kata sandi',
                     hintStyle: GoogleFonts.inter(color: Colors.grey[400]),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -290,7 +290,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   style: GoogleFonts.inter(),
                   obscureText: !_isConfirmPasswordVisible,
                   decoration: InputDecoration(
-                    hintText: 'Confirm password',
+                    hintText: 'Konfirmasi Kata Sandi',
                     hintStyle: GoogleFonts.inter(color: Colors.grey[400]),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -356,9 +356,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           fontSize: screenHeight * 0.014,
                         ),
                         children: [
-                          const TextSpan(text: "I have read and agree with the "),
+                          const TextSpan(text: "Saya telah membaca dan menyetujui"),
                           TextSpan(
-                            text: "Terms and Conditions",
+                            text: "Syarat dan Ketentuan",
                             style: GoogleFonts.inter(
                               color: const Color(0xFF3FAE82),
                               fontSize: screenHeight * 0.014,
@@ -428,7 +428,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       fontSize: screenHeight * 0.018,
                     ),
                     children: [
-                      const TextSpan(text: "Already have an account? "),
+                      const TextSpan(text: "Sudah memiliki akun? "),
                       WidgetSpan(
                         child: GestureDetector(
                           onTap: () {
@@ -438,7 +438,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             );
                           },
                           child: Text(
-                            'Log in here',
+                            'Masuk di sini', 
                             style: GoogleFonts.inter(
                               color: const Color(0xFF3FAE82),
                               fontSize: 20,

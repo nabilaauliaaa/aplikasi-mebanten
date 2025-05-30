@@ -75,6 +75,9 @@ class _ProfilePageState extends State<ProfilePage> {
     });
 
     try {
+      // Debug: Print user ID
+      print('Fetching bookmarks for user: ${currentUser!.uid}');
+      
       // Fetch bookmarks from user's document
       final userDoc = await _firestore
           .collection('users')
@@ -84,6 +87,9 @@ class _ProfilePageState extends State<ProfilePage> {
       List<String> bookmarkIds = [];
       if (userDoc.exists && userDoc.data()?['bookmarks'] != null) {
         bookmarkIds = List<String>.from(userDoc.data()!['bookmarks']);
+        print('Found bookmark IDs: $bookmarkIds');
+      } else {
+        print('No bookmarks found in user document');
       }
 
       if (bookmarkIds.isEmpty) {
@@ -98,21 +104,26 @@ class _ProfilePageState extends State<ProfilePage> {
       List<Map<String, dynamic>> bookmarks = [];
       for (String bantenId in bookmarkIds) {
         try {
+          print('Fetching banten: $bantenId');
           final bantenDoc = await _firestore
-              .collection('banten')
+              .collection('bantens')
               .doc(bantenId)
               .get();
           
           if (bantenDoc.exists) {
             Map<String, dynamic> bantenData = bantenDoc.data()!;
             bantenData['id'] = bantenDoc.id;
+            print('Banten data for $bantenId: $bantenData');
             bookmarks.add(bantenData);
+          } else {
+            print('Banten document $bantenId does not exist');
           }
         } catch (e) {
           print('Error fetching banten $bantenId: $e');
         }
       }
 
+      print('Total bookmarks fetched: ${bookmarks.length}');
       setState(() {
         _bookmarkedBanten = bookmarks;
         _isLoadingBookmarks = false;
@@ -139,7 +150,7 @@ class _ProfilePageState extends State<ProfilePage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Bookmark berhasil dihapus'),
-          backgroundColor: Color(0xFF4CAF50),
+          backgroundColor: Color(0xFF53B493),
         ),
       );
     } catch (e) {
@@ -169,7 +180,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF4CAF50),
+                    color: const Color(0xFF53B493),
                     borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(16),
                       topRight: Radius.circular(16),
@@ -209,7 +220,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       ? const Padding(
                           padding: EdgeInsets.all(40),
                           child: CircularProgressIndicator(
-                            color: Color(0xFF4CAF50),
+                            color: Color(0xFF53B493),
                           ),
                         )
                       : _bookmarkedBanten.isEmpty
@@ -263,6 +274,20 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildBookmarkItem(Map<String, dynamic> banten) {
+    // Debug: print data yang ada
+    print('Building bookmark item with data: $banten');
+    
+    // Fetching data
+    String bantenName = banten['namaBanten'] ?? 'Nama Banten';
+    String bantenDaerah = banten['daerah'] ?? 'Daerah';
+    List<dynamic>? photos = banten['photos'];
+    String? imageUrl;
+    
+    // Handle photos array
+    if (photos != null && photos.isNotEmpty) {
+      imageUrl = photos[0].toString();
+    }
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -289,17 +314,30 @@ class _ProfilePageState extends State<ProfilePage> {
                 borderRadius: BorderRadius.circular(8),
                 color: Colors.grey[200],
               ),
-              child: banten['imageUrl'] != null
+              child: imageUrl != null && imageUrl.isNotEmpty
                   ? ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: Image.network(
-                        banten['imageUrl'],
+                        imageUrl,
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) {
+                          print('Image load error for $imageUrl: $error');
                           return Icon(
                             Icons.image_not_supported,
                             color: Colors.grey[400],
                             size: 30,
+                          );
+                        },
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Center(
+                            child: CircularProgressIndicator(
+                              value: loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded /
+                                      loadingProgress.expectedTotalBytes!
+                                  : null,
+                              strokeWidth: 2,
+                            ),
                           );
                         },
                       ),
@@ -311,13 +349,14 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
             ),
             const SizedBox(width: 12),
+            
             // Content
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    banten['nama'] ?? 'Nama Banten',
+                    bantenName,
                     style: GoogleFonts.inter(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -328,31 +367,28 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    banten['kategori'] ?? 'Kategori',
+                    bantenDaerah,
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       color: Colors.grey[600],
                     ),
                   ),
-                  if (banten['deskripsi'] != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      banten['deskripsi'],
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: Colors.grey[500],
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+                  const SizedBox(height: 4),
                 ],
               ),
             ),
+            
             // Remove button
             IconButton(
               onPressed: () {
-                _showRemoveBookmarkDialog(banten['id'], banten['nama'] ?? 'Banten');
+                String bantenId = banten['id'] ?? '';
+                if (bantenId.isNotEmpty) {
+                  _showRemoveBookmarkDialog(bantenId, bantenName);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Error: Bookmark ID tidak ditemukan')),
+                  );
+                }
               },
               icon: Icon(
                 Icons.bookmark_remove,
@@ -366,7 +402,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  void _showRemoveBookmarkDialog(String bantenId, String bantenName) {
+  void _showRemoveBookmarkDialog(String bantenId, String namaBanten) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -382,7 +418,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
           ),
           content: Text(
-            'Apakah Anda yakin ingin menghapus "$bantenName" dari favorit?',
+            'Apakah Anda yakin ingin menghapus "$namaBanten" dari favorit?',
             style: GoogleFonts.inter(
               fontSize: 16,
               color: Colors.grey[600],
@@ -543,7 +579,7 @@ class _ProfilePageState extends State<ProfilePage> {
       body: _isLoading
           ? const Center(
               child: CircularProgressIndicator(
-                color: Color(0xFF4CAF50),
+                color: Color(0xFF53B493),
               ),
             )
           : _buildProfileContent(),
@@ -602,7 +638,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4CAF50),
+                backgroundColor: const Color(0xFF53B493),
                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -709,7 +745,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF4CAF50),
+                  color: const Color(0xFF53B493),
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: Colors.white,
@@ -766,7 +802,7 @@ class _ProfilePageState extends State<ProfilePage> {
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         children: [
-          // Bookmark menu item (new)
+          // Bookmark menu item
           _buildMenuItem(
             icon: Icons.bookmark_outlined,
             title: 'Banten Favorit',
@@ -775,72 +811,72 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           _buildMenuItem(
             icon: Icons.settings_outlined,
-            title: 'Settings',
+            title: 'Pengaturan',
             onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Settings akan segera tersedia'),
-                  backgroundColor: Color(0xFF4CAF50),
+                  content: Text('Pengaturan akan segera tersedia'),
+                  backgroundColor: Color(0xFF53B493),
                 ),
               );
             },
           ),
           _buildMenuItem(
             icon: Icons.description_outlined,
-            title: 'Terms and condition',
+            title: 'Syarat dan Ketentuan',
             onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Terms and condition akan segera tersedia'),
-                  backgroundColor: Color(0xFF4CAF50),
+                  content: Text('Syarat dan Ketentuan akan segera tersedia'),
+                  backgroundColor: Color(0xFF53B493),
                 ),
               );
             },
           ),
           _buildMenuItem(
             icon: Icons.privacy_tip_outlined,
-            title: 'Privacy settings',
+            title: 'Pengaturan Privasi',
             onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Privacy settings akan segera tersedia'),
-                  backgroundColor: Color(0xFF4CAF50),
+                  content: Text('Pengaturan Privasi akan segera tersedia'),
+                  backgroundColor: Color(0xFF53B493),
                 ),
               );
             },
           ),
           _buildMenuItem(
             icon: Icons.notifications_outlined,
-            title: 'Notifications',
+            title: 'Notifikasi',
             onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Notifications akan segera tersedia'),
-                  backgroundColor: Color(0xFF4CAF50),
+                  content: Text('Notifikasi akan segera tersedia'),
+                  backgroundColor: Color(0xFF53B493),
                 ),
               );
             },
           ),
           _buildMenuItem(
             icon: Icons.help_outline,
-            title: 'Help center',
+            title: 'Pusat Bantuanr',
             onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Help center akan segera tersedia'),
-                  backgroundColor: Color(0xFF4CAF50),
+                  content: Text('Pusat Bantuan akan segera tersedia'),
+                  backgroundColor: Color(0xFF53B493),
                 ),
               );
             },
           ),
           _buildMenuItem(
             icon: Icons.feedback_outlined,
-            title: 'Feedback',
+            title: 'Umpan Balik',
             onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Feedback akan segera tersedia'),
-                  backgroundColor: Color(0xFF4CAF50),
+                  content: Text('Umpan Balik akan segera tersedia'),
+                  backgroundColor: Color(0xFF53B493),
                 ),
               );
             },
@@ -857,7 +893,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // Individual menu item (updated to support subtitle)
+  // Individual menu item
   Widget _buildMenuItem({
     required IconData icon,
     required String title,
@@ -953,7 +989,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             const SizedBox(width: 12),
             Text(
-              'Logout',
+              'Keluar',
               style: GoogleFonts.inter(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -982,7 +1018,7 @@ class _ProfilePageState extends State<ProfilePage> {
       child: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         currentIndex: 2, // Profile tab active
-        selectedItemColor: const Color(0xFF4CAF50),
+        selectedItemColor: const Color(0xFF53B493),
         unselectedItemColor: Colors.grey[400],
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -1022,16 +1058,16 @@ class _ProfilePageState extends State<ProfilePage> {
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.explore_outlined, size: 24),
-            label: 'Explore',
+            label: 'Beranda',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.add, size: 24),
-            label: 'Add',
+            label: 'Tambah Banten',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person_outline, size: 24),
             activeIcon: Icon(Icons.person, size: 24),
-            label: 'Profile',
+            label: 'Profil',
           ),
         ],
       ),
