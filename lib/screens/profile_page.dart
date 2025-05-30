@@ -1,3 +1,4 @@
+import 'package:apk_mebanten/screens/banten_detail_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -263,7 +264,26 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildBookmarkItem(Map<String, dynamic> banten) {
-    return Container(
+    String namaBanten = banten['namaBanten'] ?? 'namaBanten';
+    String bantenDaerah = banten['daerah'] ?? 'Daerah';
+
+    List<dynamic>? photos = banten['photos'];
+    String? imageUrl;
+
+    if (photos != null && photos.isNotEmpty) {
+      imageUrl = photos[0].toString();
+    }
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => BantenDetailScreen(bantenId: banten['id']),
+          ),
+        );
+      },
+      child: Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -317,7 +337,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    banten['nama'] ?? 'Nama Banten',
+                    namaBanten,
                     style: GoogleFonts.inter(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -352,7 +372,7 @@ class _ProfilePageState extends State<ProfilePage> {
             // Remove button
             IconButton(
               onPressed: () {
-                _showRemoveBookmarkDialog(banten['id'], banten['nama'] ?? 'Banten');
+                _showRemoveBookmarkDialog(banten['id'], banten['namaBanten'] ?? 'Banten');
               },
               icon: Icon(
                 Icons.bookmark_remove,
@@ -363,10 +383,11 @@ class _ProfilePageState extends State<ProfilePage> {
           ],
         ),
       ),
+    )
     );
   }
 
-  void _showRemoveBookmarkDialog(String bantenId, String bantenName) {
+  void _showRemoveBookmarkDialog(String bantenId, String namaBanten) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -382,7 +403,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
           ),
           content: Text(
-            'Apakah Anda yakin ingin menghapus "$bantenName" dari favorit?',
+            'Apakah Anda yakin ingin menghapus "$namaBanten" dari favorit?',
             style: GoogleFonts.inter(
               fontSize: 16,
               color: Colors.grey[600],
