@@ -431,26 +431,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: Colors.blue[300],
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
             Text(
               'Tidak ada banten yang ditemukan',
               style: GoogleFonts.inter(
-                fontSize: 24,
+                fontSize: 18,
                 fontWeight: FontWeight.w600,
                 color: Colors.black87,
               ),
             ),
             const SizedBox(height: 12),
-            Text(
-              'Tambahkan banten pertama anda untuk memulai!',
-              style: GoogleFonts.inter(
-                fontSize: 16,
-                color: Colors.grey[600],
-                height: 1.4,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 40),
             ElevatedButton(
               onPressed: () {
                 Navigator.push(
@@ -463,11 +453,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 elevation: 0,
                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(5),
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
               child: Text(
-                'Tambahkan Banten pertamamu di sini!',
+                'Tambah Banten pertamamu di sini!',
                 style: GoogleFonts.inter(
                   color: Colors.white,
                   fontWeight: FontWeight.w600,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';  // 👈 Tambah import ini
 import '../services/banten_service.dart';
 import '../models/banten_model.dart';
 import '../services/auth_service.dart';
@@ -41,6 +42,23 @@ class _BantenDetailScreenState extends State<BantenDetailScreen> {
   
   void _loadBanten() {
     _bantenFuture = _fetchBantenModel();
+  }
+
+  // 👈 Fungsi baru untuk buka URL
+  Future<void> _launchURL(String urlString) async {
+    try {
+      final Uri url = Uri.parse(urlString);
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      print('Error launching URL: $e');
+    }
+  }
+
+  // 👈 Fungsi baru untuk cek apakah string adalah URL
+  bool _isValidUrl(String string) {
+    return string.startsWith('http://') || string.startsWith('https://');
   }
 
   // Fungsi untuk mengecek apakah banten sudah di-bookmark
@@ -352,7 +370,6 @@ class _BantenDetailScreenState extends State<BantenDetailScreen> {
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        // ✅ ADDED: Bookmark icon di AppBar
         actions: [
           if (_isCheckingBookmark)
             const Padding(
@@ -630,12 +647,81 @@ class _BantenDetailScreenState extends State<BantenDetailScreen> {
                   const SizedBox(height: 20),
                 ],
 
-                // Sumber Referensi
+                // 👈 Sumber Referensi - Yang diubah!
                 if (banten.guddenKeyword.isNotEmpty) ...[
-                  _buildSection(
-                    title: 'Sumber Referensi',
-                    content: banten.guddenKeyword,
-                    icon: Icons.source,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.source, size: 20, color: Colors.grey[600]),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Sumber Referensi',
+                            style: GoogleFonts.inter(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      GestureDetector(
+                        onTap: _isValidUrl(banten.guddenKeyword) 
+                            ? () => _launchURL(banten.guddenKeyword) 
+                            : null,
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: _isValidUrl(banten.guddenKeyword) 
+                                ? Colors.blue[50] 
+                                : Colors.grey[50],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: _isValidUrl(banten.guddenKeyword) 
+                                  ? Colors.blue[200]! 
+                                  : Colors.grey[200]!
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              if (_isValidUrl(banten.guddenKeyword)) ...[
+                                Icon(
+                                  Icons.link,
+                                  color: Colors.blue[700],
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 12),
+                              ],
+                              Expanded(
+                                child: Text(
+                                  banten.guddenKeyword,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 16,
+                                    height: 1.6,
+                                    color: _isValidUrl(banten.guddenKeyword) 
+                                        ? Colors.blue[700] 
+                                        : Colors.grey[800],
+                                    decoration: _isValidUrl(banten.guddenKeyword) 
+                                        ? TextDecoration.underline 
+                                        : null,
+                                  ),
+                                ),
+                              ),
+                              if (_isValidUrl(banten.guddenKeyword)) ...[
+                                const SizedBox(width: 8),
+                                Icon(
+                                  Icons.open_in_new,
+                                  color: Colors.blue[700],
+                                  size: 16,
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 32),
                 ],
@@ -694,7 +780,6 @@ class _BantenDetailScreenState extends State<BantenDetailScreen> {
           );
         },
       ),
-      // ✅ REMOVED: Bottom navigation bar completely
     );
   }
   

@@ -197,7 +197,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Banten Favorit',
+                          'Markah Banten',
                           style: GoogleFonts.inter(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -237,7 +237,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                   ),
                                   const SizedBox(height: 16),
                                   Text(
-                                    'Belum ada banten favorit',
+                                    'Belum ada banten yang ditandai',
                                     style: GoogleFonts.inter(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w500,
@@ -246,7 +246,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    'Tambahkan banten ke favorit dari halaman beranda',
+                                    'Tambahkan banten ke markah dari halaman beranda',
                                     textAlign: TextAlign.center,
                                     style: GoogleFonts.inter(
                                       fontSize: 14,
@@ -411,14 +411,14 @@ class _ProfilePageState extends State<ProfilePage> {
             borderRadius: BorderRadius.circular(16),
           ),
           title: Text(
-            'Hapus Bookmark',
+            'Hapus Markah',
             style: GoogleFonts.inter(
               fontWeight: FontWeight.bold,
               fontSize: 20,
             ),
           ),
           content: Text(
-            'Apakah Anda yakin ingin menghapus "$namaBanten" dari favorit?',
+            'Apakah Anda yakin ingin menghapus "$namaBanten" dari markah?',
             style: GoogleFonts.inter(
               fontSize: 16,
               color: Colors.grey[600],
@@ -549,6 +549,12 @@ class _ProfilePageState extends State<ProfilePage> {
     String username = _userData?['username'] ?? 
                      currentUser?.email?.split('@')[0] ?? 
                      'user';
+                     
+    if (username.startsWith('@')) {
+      return username.toLowerCase();
+    
+     
+    }
     return '@${username.toLowerCase()}';
   }
 
@@ -804,8 +810,8 @@ class _ProfilePageState extends State<ProfilePage> {
         children: [
           // Bookmark menu item
           _buildMenuItem(
-            icon: Icons.bookmark_outlined,
-            title: 'Banten Favorit',
+            icon: Icons.bookmark_outline,
+            title: 'Markah Banten',
             subtitle: '${_bookmarkedBanten.length} banten tersimpan',
             onTap: _showBookmarkDialog,
           ),
@@ -859,7 +865,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           _buildMenuItem(
             icon: Icons.help_outline,
-            title: 'Pusat Bantuanr',
+            title: 'Pusat Bantuan',
             onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(

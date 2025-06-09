@@ -965,7 +965,7 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF53B493),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(5),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       elevation: 0,
                     ),
@@ -979,7 +979,7 @@ class _TambahBantenPageState extends State<TambahBantenPage> {
                             ),
                           )
                         : const Text(
-                            'Posting',
+                            'Unggah',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
